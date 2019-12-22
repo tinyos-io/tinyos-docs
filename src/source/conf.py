@@ -17,7 +17,7 @@
 
 # -- Project information -----------------------------------------------------
 
-project = 'TinyOS documentation'
+project = 'TinyOS'
 copyright = '2019, ABDULLATIF Mouhamadi'
 author = 'ABDULLATIF Mouhamadi'
 
