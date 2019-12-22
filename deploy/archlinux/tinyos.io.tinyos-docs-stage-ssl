@@ -1,0 +1,46 @@
+#ln -s /etc/nginx/servers-available/NGINX_FILENAME /etc/nginx/servers-enabled/NGINX_FILENAME
+
+# EXAMPLES #
+############
+# MYHOST = myhost.com
+# NGINX_FILENAME = project.app-stage
+# WORKINGDIR = /root/path/
+
+server {
+    if ($host = www.MYHOST) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+    if ($host = MYHOST) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+	listen 80;
+	server_name www.MYHOST MYHOST;
+	return 404; # managed by Certbot
+}
+
+server {
+	server_name www.MYHOST MYHOST;
+    listen 443 ssl; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/MYHOST/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/MYHOST/privkey.pem; # managed by Certbot
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+
+	root    WORKINGDIR;
+	index   index.html;
+
+	# ACME challenge
+	location ^~ /.well-known {
+		allow all;
+		alias /var/lib/letsencrypt/.well-known/;
+		default_type "text/plain";
+		try_files $uri =404;
+	}
+
+	access_log  /var/log/nginx/NGINX_FILENAME.access.log;
+	error_log   /var/log/nginx/NGINX_FILENAME.error.log;
+}
+
+

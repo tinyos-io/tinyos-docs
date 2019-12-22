@@ -1,0 +1,28 @@
+#ln -s /etc/nginx/servers-available/NGINX_FILENAME /etc/nginx/servers-enabled/NGINX_FILENAME
+
+# EXAMPLES #
+############
+# MYHOST = myhost.com
+# NGINX_FILENAME = project.app-stage
+# WORKINGDIR = /root/path/
+
+
+server {
+	server_name www.MYHOST MYHOST;
+
+	root    WORKINGDIR;
+	index   index.html;
+
+	# ACME challenge
+	location ^~ /.well-known {
+		allow all;
+		alias /var/lib/letsencrypt/.well-known/;
+		default_type "text/plain";
+		try_files $uri =404;
+	}
+
+	access_log  /var/log/nginx/NGINX_FILENAME.access.log;
+	error_log   /var/log/nginx/NGINX_FILENAME.error.log;
+}
+
+
