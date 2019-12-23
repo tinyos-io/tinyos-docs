@@ -1,0 +1,398 @@
+This lesson demonstrates how to use the TOSThreads library. You will learn how to do the following:
+* Use the nesC API to create and manipulate both static and dynamic threads.
+* Use the C API to create and manipulate threads.
+* Add TOSThreads support to new system services.
+
+'''Note:''' TOSThreads is part of TinyOS 2.1.
+
+=Introduction=
+
+TOSThreads is an attempt to combine the ease of a threaded programming model with the efficiency of a fully event-based OS. Unlike earlier threads packages designed for TinyOS, TOSThreads offers the following benefits:
+# It supports fully-preemptive application-level threads.
+# It does not need explicit continuation management, such as state variables between corresponding commands and events.
+# It does not violate TinyOS's concurrency model.
+# It requires minimal changes to the existing TinyOS code base. In addition, adding TOSThreads support to a new platform is a fairly easy process.
+# It offers both nesC and C APIs.
+
+In TOSThreads, TinyOS runs inside a single high-priority kernel thread, while the application logic is implemented in user-level threads. User-level threads execute whenever the TinyOS core becomes idle. This approach is a natural extension to the existing TinyOS concurrency model: adding support for long-running computations while preserving the timing-sensitive nature of TinyOS itself.
+
+In this model, application threads access underlying TinyOS services using a kernel API of blocking system calls. The kernel API defines the set of TinyOS services provided to applications, such as radio, collection [http://www.tinyos.net/tinyos-2.1.0/doc/html/tep119.html (TEP119)], and so on. Each system call in the API is comprised of a thin blocking wrapper built on top of one of these services. The blocking wrapper is responsible for maintaining states across the non-blocking split-phase operations. TOSThreads allows system developers to re-define the kernel API by appropriately selecting an existing set or implementing their own blocking system call wrappers.
+
+Please refer to TEP134 for more details on the TOSThreads implementation.
+
+=The TOSThreads library=
+
+At the time of writing, TOSThreads supports the following platforms: telosb, micaZ, and mica2. And, it supports various generic split-phase operations, such as the Read interface and the SplitControl interface, and system services, such as radio, serial, external flash (both Block and Log abstractions), CTP (Collection Tree Protocol), and so on. You can find the code in [http://tinyos.cvs.sourceforge.net/viewvc/tinyos/tinyos-2.x/tos/lib/tosthreads/ tos/lib/tosthreads/] as described below.
+
+TOSThreads system files are located in several subdirectories under [http://tinyos.cvs.sourceforge.net/viewvc/tinyos/tinyos-2.x/tos/lib/tosthreads/ tos/lib/tosthreads/].
+# '''chips''': Some chip-specific files that shadow ''tinyos-2.x/tos/chips'' to add code such as the interrupt postamble.
+# '''csystem''': Contain C API system files and the header file for different system services.
+# '''interfaces''': Contain nesC API interfaces.
+# '''lib''': Shadow some files in ''tinyos-2.x/tos/lib'', and contain the blocking wrapper for CTP.
+# '''platforms''': Shadow some files in ''tinyos-2.x/tos/platforms''.
+# '''sensorboards''': Contain blocking wrappers for telosb's onboard SHT11 sensors, and an universal sensor that generates a sine wave.
+# '''system''': Contain nesC API system files and the blocking wrappers for different system services.
+# '''types''': Define the structs used by TOSThreads system files.
+
+You can find example TOSThreads applications are in [http://tinyos.cvs.sourceforge.net/viewvc/tinyos/tinyos-2.x/apps/tosthreads/ apps/tosthreads/].
+
+=nesC API=
+==Static threads==
+We will use ''RadioStress'' as an example to illustrate manipulating static threads with nesC API. The application creates three threads to stress the radio operations. The nesC version is located in [http://tinyos.cvs.sourceforge.net/viewvc/tinyos/tinyos-2.x/apps/tosthreads/apps/RadioStress/ apps/tosthreads/apps/RadioStress/].  Type '''make telosb threads''' to compile.
+
+'''RadioStressAppC.nc''':
+
+{| cellpadding="0" border="0" align="right" width="99%"
+| ..... ||  ||
+|-
+| <font style="font-size:smaller">components new ThreadC(300) as RadioStressThread0;</font> || <code>Statically create a thread that has 300-byte stack space</code> ||
+|-
+| <font style="font-size:smaller">components new BlockingAMSenderC(220) as BlockingAMSender0;</font> || <code>Blocking wrapper for AM Sender (AM ID is 220)</code> ||
+|-
+| <font style="font-size:smaller">components new BlockingAMReceiverC(220) as BlockingAMReceiver0;</font> || <code>Blocking wrapper for AM Receiver (AM ID is 220)</code> ||
+|-
+| &nbsp; ||  ||
+|-
+| <font style="font-size:smaller">RadioStressC.RadioStressThread0 -> RadioStressThread0;</font> ||  ||
+|-
+| <font style="font-size:smaller">RadioStressC.BlockingAMSend0 -> BlockingAMSender0;</font> ||  ||
+|-
+| <font style="font-size:smaller">RadioStressC.BlockingReceive0 -> BlockingAMReceiver0;</font> ||  ||
+|-
+| ..... ||  ||
+|}
+
+'''RadioStressC.nc''':
+
+{| cellpadding="0" border="0" align="right" width="99%"
+| ..... ||  ||
+|-
+| <font style="font-size:smaller">event void Boot.booted() {</font> ||  ||
+|-
+| <font style="font-size:smaller">&nbsp;&nbsp;call RadioStressThread0.start(NULL);</font> || <code>Singal the thread scheduler to start executing thread's main function with NULL arguments</code> ||
+|-
+| <font style="font-size:smaller">&nbsp;&nbsp;call RadioStressThread1.start(NULL);</font> ||  ||
+|-
+| <font style="font-size:smaller">&nbsp;&nbsp;call RadioStressThread2.start(NULL);</font> ||  ||
+|-
+| <font style="font-size:smaller">}</font> ||  ||
+|-
+| ..... ||  ||
+|-
+| <font style="font-size:smaller">event void RadioStressThread0.run(void* arg) {</font> || <code>''RadioStressThread0'' thread's main function</code> ||
+|-
+| <font style="font-size:smaller">&nbsp;&nbsp;call BlockingAMControl.start();</font> || <code>Start the radio. The thread will be blocked until the operation completes</code> ||
+|-
+| <font style="font-size:smaller">&nbsp;&nbsp;for(;;) {</font> || ||
+|-
+| <font style="font-size:smaller">&nbsp;&nbsp;&nbsp;&nbsp;if(TOS_NODE_ID == 0) {</font> || ||
+|-
+| <font style="font-size:smaller">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;call BlockingReceive0.receive(&m0, 5000); || <code>Try to listen for an incoming packet for 5000 ms. The thread is blocked until the operation completes</code> ||
+|-
+| <font style="font-size:smaller">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;call Leds.led0Toggle();</font> || ||
+|-
+| <font style="font-size:smaller">&nbsp;&nbsp;&nbsp;&nbsp;} else {</font> || ||
+|-
+| <font style="font-size:smaller">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;call BlockingAMSend0.send(!TOS_NODE_ID, &m0, 0);</font> || <code>Send a packet ''m0'' of length 0 byte. The thread is blocked until the operation completes</code> ||
+|-
+| <font style="font-size:smaller">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;call Leds.led0Toggle();</font> || ||
+|-
+| <font style="font-size:smaller">&nbsp;&nbsp;&nbsp;&nbsp;}</font> || ||
+|-
+| <font style="font-size:smaller">&nbsp;&nbsp;}</font> || ||
+|-
+| <font style="font-size:smaller">}</font> ||  ||
+|-
+| ..... ||  ||
+|}
+
+The ''ThreadC'' component provides a [http://tinyos.cvs.sourceforge.net/viewvc/tinyos/tinyos-2.x/tos/lib/tosthreads/interfaces/Thread.nc?view=markup Thread] interface for creating and manipulating static threads:
+
+'''Thread.nc''':
+
+{| cellpadding="0" border="0" align="right" width="99%"
+| <font style="font-size:smaller">interface Thread {</font> || ||
+|-
+| <font style="font-size:smaller">&nbsp;&nbsp;command error_t start(void* arg);</font> || ||
+|-
+| <font style="font-size:smaller">&nbsp;&nbsp;command error_t stop();</font> || ||
+|-
+| <font style="font-size:smaller">&nbsp;&nbsp;command error_t pause();</font> || ||
+|-
+| <font style="font-size:smaller">&nbsp;&nbsp;command error_t resume();</font> || ||
+|-
+| <font style="font-size:smaller">&nbsp;&nbsp;command error_t sleep(uint32_t milli);</font> || ||
+|-
+| <font style="font-size:smaller">&nbsp;&nbsp;event void run(void* arg);</font> || ||
+|-
+| <font style="font-size:smaller">&nbsp;&nbsp;command error_t join();</font> || ||
+|-
+| <font style="font-size:smaller">}</font> || ||
+|}
+
+Calling start() on a thread signals to the TOSThreads thread scheduler that the thread should begin executing (at some time later, the run() event will be signaled). The argument is a pointer to a data structure passed to the thread once it starts executing. Calls to start() return either SUCCESS or FAIL.
+
+Calling stop() on a thread signals to the TOSThreads thread scheduler that the thread should stop executing. Once a thread is stopped it cannot be restarted. Calls to stop() return SUCCESS if a thread was successfully stopped, and FAIL otherwise. stop() MUST NOT be called from within the thread being stopped; it MUST be called from either the TinyOS thread or another application thread. 
+
+Calling pause() on a thread signals to the TOSThreads thread scheduler that the thread should be paused. Unlike a stopped thread, a paused thread can be restarted later by calling resume() on it. pause() MUST ONLY be called from within the thread itself that is being paused. 
+
+Calling sleep() puts a thread to sleep for the interval specified in its single 'milli' parameter. sleep() MUST ONLY be called from within the thread itself that is being put to sleep. SUCCESS is returned if the thread was successfully put to sleep, FAIL otherwise.
+
+==Dynamic threads==
+
+Other than running static threads as the example shows, nesC API can also create dynamic threads at run time. The nesC interface for creating and manipulating dynamic threads is [http://tinyos.cvs.sourceforge.net/viewvc/tinyos/tinyos-2.x/tos/lib/tosthreads/interfaces/DynamicThread.nc?view=markup DynamicThread]:
+
+'''DynamicThread.nc''':
+
+{| border="0" cellpadding="0" align="right" width="99%"
+| <font style="font-size:smaller">interface DynamicThread {</font> ||
+|-
+| <font style="font-size:smaller">&nbsp;&nbsp;command error_t create(tosthread_t* t, void (*start_routine)(void*), void* arg, uint16_t stack_size);</font> ||
+|-
+| <font style="font-size:smaller">&nbsp;&nbsp;command error_t destroy(tosthread_t* t);</font> ||
+|-
+| <font style="font-size:smaller">&nbsp;&nbsp;command error_t pause(tosthread_t* t);</font> ||
+|-
+| <font style="font-size:smaller">&nbsp;&nbsp;command error_t resume(tosthread_t* t);</font> ||
+|-
+| <font style="font-size:smaller">&nbsp;&nbsp;command error_t sleep(uint32_t milli);</font> ||
+|-
+| <font style="font-size:smaller">}</font> ||
+|}
+
+[http://tinyos.cvs.sourceforge.net/viewvc/tinyos/tinyos-2.x/apps/tosthreads/apps/Blink_DynamicThreads/ Blink_DynamicThreads] is an example application that demostrates how to use dynamic threads.
+
+=C API=
+
+The C version of ''RadioStress'' is located in [http://tinyos.cvs.sourceforge.net/viewvc/tinyos/tinyos-2.x/apps/tosthreads/capps/RadioStress/ apps/tosthreads/capps/RadioStress]. Type '''make telosb cthreads''' to compile.
+
+'''RadioStress.c''':
+
+{| cellpadding="0" border="0" align="right" width="99%"
+| <font style="font-size:smaller">#include "tosthread.h"</font> || <code>Header file that defines thread-related functions</code>||
+|-
+| <font style="font-size:smaller">#include "tosthread_amradio.h"</font> || <code>Header file that defines radio-related functions</code>||
+|-
+| <font style="font-size:smaller">#include "tosthread_leds.h"</font> || <code>Header file that defines LED-related functions</code>||
+|-
+| || ||
+|-
+| <font style="font-size:smaller">tosthread_t radioStress0;</font> || <code>Declare a thread object</code> ||
+|-
+| ..... ||  ||
+|-
+|  || ||
+|-
+| <font style="font-size:smaller">void tosthread_main(void* arg) {</font> || <code>Main thread's main function. This is run after the system successfully boots</code>||
+|-
+| <font style="font-size:smaller">&nbsp;&nbsp;while( amRadioStart() != SUCCESS );</font> || <code>Starts the radio. The main thread will be blocked until the operation completes</code>||
+|-
+| <font style="font-size:smaller">&nbsp;&nbsp;tosthread_create(&radioStress0, radioStress0_thread, &msg0, 200);</font> || <code>Create a thread with 200-byte stack space. ''radioStress0_thread'' is the main function.</code>||
+|-
+| ..... ||  ||
+|-
+| <font style="font-size:smaller">}</font> || |
+|-
+| ..... || ||
+|-
+| || ||
+|-
+| <font style="font-size:smaller">void radioStress0_thread(void* arg) {</font> || <code>''radioStress0'' thread's main function</code>||
+|-
+| <font style="font-size:smaller">&nbsp;&nbsp;message_t* m = (message_t*)arg;</font> || ||
+|-
+| <font style="font-size:smaller">&nbsp;&nbsp;for(;;) {</font> || ||
+|-
+| <font style="font-size:smaller">&nbsp;&nbsp;&nbsp;&nbsp;if(TOS_NODE_ID == 0) {</font> || ||
+|-
+| <font style="font-size:smaller">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;amRadioReceive(m, 2000, 20);</font> || <code>Try to listen for an incoming packet for 2000 ms. The thread is blocked until the operation completes</code>||
+|-
+| <font style="font-size:smaller">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;led0Toggle();</font> || ||
+|-
+| <font style="font-size:smaller">&nbsp;&nbsp;&nbsp;&nbsp;}</font> || ||
+|-
+| <font style="font-size:smaller">&nbsp;&nbsp;&nbsp;&nbsp;else {</font> || ||
+|-
+| <font style="font-size:smaller">&nbsp;&nbsp;&nbsp;&nbsp;if(amRadioSend(!TOS_NODE_ID, m, 0, 20) == SUCCESS)</font> || <code>Send a packet ''m0'' of length 0 byte, and specify the AM ID to be 20. The thread is blocked until the operation completes</code>||
+|-
+| <font style="font-size:smaller">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;led0Toggle();</font> || ||
+|-
+| <font style="font-size:smaller">&nbsp;&nbsp;&nbsp;&nbsp;}</font> || ||
+|-
+| <font style="font-size:smaller">&nbsp;&nbsp;}</font> || ||
+|-
+| <font style="font-size:smaller">}</font> || ||
+| ..... ||  ||
+|}
+
+Similarily, [http://tinyos.cvs.sourceforge.net/viewvc/tinyos/tinyos-2.x/tos/lib/tosthreads/csystem/tosthread.h?view=markup tosthread.h] provides commands to manipulate threads.
+
+=Support new system services=
+
+We will use the log abstraction as an example service to show how to add TOSThreads support to new system services. As mentioned before, TOSThreads overlays a blocking wrapper on top of the split-phase system service.
+
+The first step is to define the interface file provided by the blocking wrapper. The user threaded application uses this interface to make the system call. The interface file for log abstraction is [http://tinyos.cvs.sourceforge.net/viewvc/tinyos/tinyos-2.x/tos/lib/tosthreads/interfaces/BlockingLog.nc?view=markup tos/lib/tosthreads/interfaces/BlockingLog.nc].
+
+With the interface file, you then can write the blocking wrapper. The blocking wrapper for log abstraction is implemented by [http://tinyos.cvs.sourceforge.net/viewvc/tinyos/tinyos-2.x/tos/lib/tosthreads/system/BlockingLogStorageC.nc?view=markup tos/lib/tosthreads/system/BlockingLogStorageC.nc], [http://tinyos.cvs.sourceforge.net/viewvc/tinyos/tinyos-2.x/tos/lib/tosthreads/system/BlockingLogStorageP.nc?view=markup tos/lib/tosthreads/system/BlockingLogStorageP.nc], and [http://tinyos.cvs.sourceforge.net/viewvc/tinyos/tinyos-2.x/tos/lib/tosthreads/system/BlockingLogStorageImplP.nc?view=markup tos/lib/tosthreads/system/BlockingLogStorageImplP.nc].
+
+'''BlockingLogStorageImplP.nc''':
+
+{| cellpadding="0" border="0" align="right" width="99%"
+| ..... ||  ||
+|-
+| <font style="font-size:smaller"> typedef struct read_params {</font> || <code>System call arguments passed from the user thread to the kernel thread</code> ||
+|-
+| <font style="font-size:smaller"> &nbsp;&nbsp;void *buf;</font> || ||
+|-
+| <font style="font-size:smaller"> &nbsp;&nbsp;storage_len_t* len;</font> || ||
+|-
+| <font style="font-size:smaller"> &nbsp;&nbsp;error_t error;</font> || ||
+|-
+| <font style="font-size:smaller"> } read_params_t;</font> || ||
+|-
+| ..... ||  ||
+|-
+|  ||  ||
+|-
+| <font style="font-size:smaller"> void readTask(syscall_t *s) {</font> || <code>TinyOS kernel thread executes this function to carry out the system call</code> ||
+|-
+| <font style="font-size:smaller"> &nbsp;&nbsp;read_params_t *p = s->params;</font> || ||
+|-
+|  ||  ||
+|-
+| <font style="font-size:smaller"> &nbsp;&nbsp;p->error = call LogRead.read[s->id](p->buf, *(p->len));</font> || <code>The split-phase system call</code> ||
+|-
+| <font style="font-size:smaller"> &nbsp;&nbsp;if(p->error != SUCCESS) {</font> || ||
+|-
+| <font style="font-size:smaller"> &nbsp;&nbsp;&nbsp;&nbsp;call SystemCall.finish(s);</font> || ||
+|-
+| <font style="font-size:smaller"> &nbsp;&nbsp;}</font> || ||
+|-
+| <font style="font-size:smaller"> }</font> || ||
+|-
+|  ||  ||
+|-
+| <font style="font-size:smaller"> command error_t BlockingLog.read[uint8_t volume_id](void *buf, storage_len_t *len) {</font> || ||
+|-
+| <font style="font-size:smaller"> &nbsp;&nbsp;syscall_t s;</font> || <code>Contain a pointer to a structure used when making system calls into a TOSThreads kernel. This structure is readable by both a system call wrapper implementation and the TinyOS kernel thread.</code> ||
+|-
+| <font style="font-size:smaller"> &nbsp;&nbsp;read_params_t p;</font> || ||
+|-
+| <font style="font-size:smaller"> &nbsp;&nbsp;atomic {</font> || ||
+|-
+| <font style="font-size:smaller"> &nbsp;&nbsp;&nbsp;&nbsp;if(call SystemCallQueue.find(&vol_queue, volume_id) != NULL)</font> || ||
+|-
+| <font style="font-size:smaller"> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return EBUSY;</font> || ||
+|-
+| <font style="font-size:smaller"> &nbsp;&nbsp;&nbsp;&nbsp;call SystemCallQueue.enqueue(&vol_queue, &s);</font> || ||
+|-
+| <font style="font-size:smaller"> &nbsp;&nbsp;}</font> || ||
+|-
+|  ||  ||
+|-
+| <font style="font-size:smaller"> &nbsp;&nbsp;p.buf = buf;</font> || <code>Save the system call argument, buf</code> ||
+|-
+| <font style="font-size:smaller"> &nbsp;&nbsp;p.len = len;</font> || <code>Save the system call argument, len</code> ||
+|-
+| <font style="font-size:smaller"> &nbsp;&nbsp;call SystemCall.start(&readTask, &s, volume_id, &p);</font> || <code>Pause the user thread and pass the control to the TinyOS kernel thread</code> ||
+|-
+|  ||  ||
+|-
+| <font style="font-size:smaller"> &nbsp;&nbsp;atomic {</font> || ||
+|-
+| <font style="font-size:smaller"> &nbsp;&nbsp;&nbsp;&nbsp;call SystemCallQueue.remove(&vol_queue, &s);</font> || ||
+|-
+| <font style="font-size:smaller"> &nbsp;&nbsp;&nbsp;&nbsp;return p.error;</font> || <code>Return the error code to the user thread</code> ||
+|-
+| <font style="font-size:smaller"> &nbsp;&nbsp;}</font> || ||
+|-
+| <font style="font-size:smaller"> }</font> || ||
+|-
+|  ||  ||
+|-
+| <font style="font-size:smaller"> event void LogRead.readDone[uint8_t volume_id](void *buf, storage_len_t len, error_t error) {</font> || ||
+|-
+| <font style="font-size:smaller"> &nbsp;&nbsp;syscall_t *s = call SystemCallQueue.find(&vol_queue, volume_id);</font> || ||
+|-
+| <font style="font-size:smaller"> &nbsp;&nbsp;read_params_t *p = s->params;</font> || ||
+|-
+| <font style="font-size:smaller"> &nbsp;&nbsp;if (p->buf == buf) {</font> || ||
+|-
+| <font style="font-size:smaller"> &nbsp;&nbsp;&nbsp;&nbsp;p->error = error;</font> || <code>Save the error code returned by the system call</code> ||
+|-
+| <font style="font-size:smaller"> &nbsp;&nbsp;&nbsp;&nbsp;*(p->len) = len;</font> || ||
+|-
+| <font style="font-size:smaller"> &nbsp;&nbsp;&nbsp;&nbsp;call SystemCall.finish(s);</font> || ||
+|-
+| <font style="font-size:smaller"> &nbsp;&nbsp;}</font> || ||
+|-
+| <font style="font-size:smaller"> }</font> || ||
+|-
+| ..... ||  ||
+|}
+
+With the nesC blocking wrapper, you can also add C API support. You will need a file that performs redirection from the C call to the nesC call, and the C header file. For the log abstraction, these files are in [http://tinyos.cvs.sourceforge.net/viewvc/tinyos/tinyos-2.x/tos/lib/tosthreads/csystem/ tinyos-2.x/tos/lib/tosthreads/csystem/].
+
+'''CLogStorageP.nc''':
+
+{| cellpadding="0" border="0" align="right" width="99%"
+| ..... ||  ||
+|-
+| <font style="font-size:smaller"> error_t volumeLogRead(uint8_t volumeId, void *buf, storage_len_t *len) @C() @spontaneous() {</font> || ||
+|-
+| <font style="font-size:smaller"> &nbsp;&nbsp;return call BlockingLog.read[volumeId](buf, len);</font> || ||
+|-
+| <font style="font-size:smaller"> }</font> || ||
+|-
+| ..... ||  ||
+|}
+
+'''tosthread_logstorage.h''':
+
+{| cellpadding="0" border="0" align="right" width="99%"
+| <font style="font-size:smaller"> #ifndef TOSTHREAD_LOGSTORAGE_H</font> || ||
+|-
+| <font style="font-size:smaller"> #define TOSTHREAD_LOGSTORAGE_H</font> || ||
+|-
+| ..... ||  ||
+|-
+| <font style="font-size:smaller"> extern error_t volumeLogRead(uint8_t volumeId, void *buf, storage_len_t *len); || ||
+|-
+| ..... ||  ||
+|}
+
+Based on what C API header files are included in the user application, TOSThreads includes the appropriate components. This step is done in [http://tinyos.cvs.sourceforge.net/viewvc/tinyos/tinyos-2.x/tos/lib/tosthreads/csystem/TosThreadApiC.nc?view=markup tos/lib/tosthreads/csystem/TosThreadApiC.nc].
+
+'''TosThreadApiC.nc''':
+
+{| cellpadding="0" border="0" align="right" width="99%"
+| <font style="font-size:smaller">#if defined(TOSTHREAD_BLOCKSTORAGE_H) <nowiki>||</nowiki> defined(TOSTHREAD_DYNAMIC_LOADER)</font> || ||
+|-
+| <font style="font-size:smaller"> &nbsp;&nbsp;components CLogStorageC;</font> || ||
+|-
+| <font style="font-size:smaller"> #endif</font> || ||
+|}
+
+''CLogStorageC'' is included when ''tosthread_logstorage.h'' or dynamic threads are used.
+
+=Synchronization primitives=
+
+TOSThreads supports the following synchronization primitives:
+# '''Mutex''': The interface file is [http://tinyos.cvs.sourceforge.net/viewvc/tinyos/tinyos-2.x/tos/lib/tosthreads/interfaces/Mutex.nc?view=markup tos/lib/tosthreads/interfaces/Mutex.nc].
+# '''Semaphore''': This is an implementation of counting semaphore. The interface file is [http://tinyos.cvs.sourceforge.net/viewvc/tinyos/tinyos-2.x/tos/lib/tosthreads/interfaces/Semaphore.nc?view=markup tos/lib/tosthreads/interfaces/Semaphore.nc].
+# '''Barrier''': All threads that call Barrier.block() are paused until ''v'' threads have made the block call. The interface file is [http://tinyos.cvs.sourceforge.net/viewvc/tinyos/tinyos-2.x/tos/lib/tosthreads/interfaces/Barrier.nc?view=markup tos/lib/tosthreads/interfaces/Barrier.nc].
+# '''Condition variable''': The interface file is The interface file is [http://tinyos.cvs.sourceforge.net/viewvc/tinyos/tinyos-2.x/tos/lib/tosthreads/interfaces/ConditionVariable.nc?view=markup tos/lib/tosthreads/interfaces/ConditionVariable.nc].
+# '''Blocking reference counter''': A thread can wait for the maintained counter to reach ''count''. The interface provides a way for other threads to increment and decrement the maintained counter. The interface is [http://tinyos.cvs.sourceforge.net/viewvc/tinyos/tinyos-2.x/tos/lib/tosthreads/interfaces/ReferenceCounter.nc?view=markup tos/lib/tosthreads/interfaces/ReferenceCounter.nc].
+
+[http://tinyos.cvs.sourceforge.net/viewvc/tinyos/tinyos-2.x/apps/tosthreads/apps/Bounce Bounce] is an example application that demostrates how to use the barrier synchronization primitive.
+
+=Related documentation=
+
+* [http://www.tinyos.net/tinyos-2.1.0/doc/html/tep134.html TEP 134: The TOSThreads Thread Library]
+
+----
+
+<center>
+< '''[[Writing Low-Power Applications | Previous Lesson]]''' | '''[[#Overview| Top]]''' |
+</center>
+[[Category:Tutorials]]

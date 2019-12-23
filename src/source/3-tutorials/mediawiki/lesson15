@@ -1,0 +1,124 @@
+This lesson demonstrates how to use the newest version of the <code>printf</code> library located in <code>tos/lib/printf</code> to debug TinyOS applications by printing messages over the serial port.   
+
+This tutorial replaces older versions of the tutorial written for previous versions of TinyOS.
+
+Legacy versions are listed below:
+* [[The TinyOS printf Library (2.0.2 Release)]].
+<br>
+
+=Overview=
+
+Anyone familiar with TinyOS knows that debugging applications has traditionally been a very arduous, if not stressful process. While simulators like TOSSIM can be used to help verify the logical correctness of a program, unforseen problems inevitably arise once that program is deployed on real hardware. Debugging such a program typically involves flashing the three available LEDs in some intricate sequence or resorting to line by line analysis of a running program through the use of a JTAG.
+
+It is common practice when developing desktop applications to print output to the terminal screen for debugging purposes. While tools such as <code>gdb</code> provide means of stepping though a program line by line, often times developers simply want to quickly print something to the screen to verify that the value of a variable has been set correctly, or determine that some sequence of events is being run in the proper order. It would be absurd to suggest that they only be allowed three bits of information in order to do so.
+
+The TinyOS <code>printf</code> library provides this terminal printing functionality to TinyOS applications through motes connected to a pc via their serial interface. Messages are printed by calling <code>printf</code> commands using a familiar syntax borrowed from the C programming language. In order to use this functionality, developers simply need to include a single component in their top level configuration file (<code>PrintfC</code>), and include a <code>"printf.h"</code> header file in any components that actually call <code>printf()</code>.
+
+Currently, the <code>printf</code> library is only supported on msp430 and atmega128x based platforms (e.g. mica2, micaZ, telos, eyesIFX). In the future we hope to add support for other platforms as well.
+
+=The TinyOS <code>printf</code> Library=
+
+This section provides a basic overview of the TinyOS <code>printf</code> library, including the components that make it up and the interfaces they provide. In the following section we walk you through the process of actually using these components to print messages from a mote to your pc. If you dont care how <code>printf</code> works and only want to know how to use it, feel free to skip ahead to the next section.
+
+----
+
+The entire <code>printf</code> library consists of only 4 files located in the <code>tos/lib/printf/2_0_2</code> directory: one module, one configuration, one interface file, and one header file.
+
+* '''MainC.nc''' -- A shadowed version of the MainC system component that wires in and automatically powers up the printf subsystem
+* '''PrintfC.nc''' -- Configuration file providing printf functionality to TinyOS applications
+* '''PrintfP.nc''' -- Module implementing the printf functionality
+* '''printf.h''' -- Header file specifying the printf message format and size of the flush buffer
+<br>
+
+Printf functionality can be added to any application by simply #including the 'printf.h' header file.  After this header file has been included, <code>printf</code> commands can be invoked by calling <code>printf()</code>, and flush commands can be invoked by calling <code>printfflush</code>.  
+<br>
+
+Below is a graph of the <code>MainC</code> and <code>PrintfC</code> configurations that make this all possible.  The <code>MainC</code> component redirects the <code>Boot.booted()</code> event through the <code>PrintfC</code> component so that it can power up the serial port and get the printf buffer initialized for printing:
+
+<center>[[Image:mainc_printf_components.png| 350px]] [[Image:printf_components_2.1.png | 550px]]
+
+'''Figure 1: The component graph of the MaincC and PrintfC configurations.'''
+
+</center>
+
+Conceptually, the operation of the TinyOS <code>printf</code> library is very simple. Developers supply strings to <code>printf()</code> commands in a distributed fashion throughout any of the components that make up a complete TinyOS application. These strings are buffered in a central location inside the <code>PrintfP</code> component and flushed out to a PC in the form of TinyOS SerialMessages upon calling a <code>printfflush()</code> command.  No nesC interfaces are required, and both the <code>printf()</code> and <code>printfflush()</code> commands can be called in c-fashion by simply including the 'printf.h' header file.
+
+By encapsulating the strings produced by calls to <code>printf()</code> inside standard TinyOS SerialMessages, applications that use the serial stack for other purposes can share the use of the serial port. Alternate implementations were considered in which <code>printf</code> would have had exclusive access to the serial port. In the end, we felt it was better to give developers the freedom to decide exactly when messages should be printed, as well as allow them to send multiple types of SerialMessages in a single application.
+
+A circular buffer is used to store the strings supplied to <code>printf()</code> before flushing them. This means that while the buffer is being flushed, calls to <code>printf</code> will still continue to succeed.  The default buffer size is 250 bytes, and flushing is automatically performed whenever this buffer becomes more than half full.  Explicit flushing is also possible by making calls to <code>printfflush()</code>.  Most applications can get away with the automatic flushing capabilities, but explicit flushing is still recommended in applications where the sections of code under examinatation are very timing sensitive (e.g. inside the CC2420 radio stack).
+
+=Using the TinyOS <code>printf</code> Library=
+
+To help guide the process of using the <code>printf</code> library, a tutorial application has been created.  Navigate to the <code>tinyos-2.x/apps/tutorials/Printf</code> directory to follow along.
+<br>
+
+The <code>Printf</code> application demonstrates everything necessary to use the <code>printf</code> library. Go ahead and open the <code>TestPrintfAppC</code> configuration to see how simple the wiring is.  Notice that unlike previous versions of <code>printf</code>, no explicit wiring to printf specific components are necessary.
+  configuration TestPrintfAppC{
+  } 
+  implementation {
+    components MainC, TestPrintfC;
+    TestPrintfC.Boot -> MainC;
+  }
+All that is needed is to wire the application's <code>Boot</code> interface into <code>MainC</code>.  <code>MainC</code> takes care of all the wiring necessary to bring up the Printf service and allow you to make calls to <code>printf()</code> and <code>printfflush</code>.  As mentioned before, <code>printf()</code> and <code>printfflush()</code> commands can be called from any component as long as they have included the <code>"printf.h"</code> header file.
+
+----
+
+Before examining the <code>TestPrintfC</code> component, first install the application on a mote and see what kind of output it produces. Note that the instructions here are only valid for installation on a telosb mote on a linux based TinyOS distribution. For installation on other systems or for other mote platforms, please refer to [[Getting_Started_with_TinyOS|lesson 1]] for detailed instructions.
+
+To install the application on the mote, run the following set of commands.
+ cd $TOSROOT\tutorials\Printf
+ make telosb install bsl,/dev/ttyUSBXXX
+
+To see the output generated by the <code>Printf</code> tutorial application you need to start the <code>PrintfClient</code> by running the following command:
+ java net.tinyos.tools.PrintfClient -comm serial@/dev/ttyUSBXXX:telosb
+After resetting the mote, the following output should be printed to your screen:
+ Hi I am writing to you from my TinyOS application!!
+ Here is a uint8: 123
+ Here is a uint16: 12345
+ Here is a uint32: 1234567890
+Note that the 'tty' device (i.e. COM port) specified when starting the PrintfClient MUST be the one used for communicating with a mote over the serial line. On telos and mica motes this is the same port that the mote is programmed from. Other motes, such as eyesIFX, have one port dedicated to programming and another for communication. Just make sure you use the correct one.
+
+If for some reason you do not receive the output shown above, please refer to [[Mote-PC_serial_communication_and_SerialForwarder|lesson 4]] to verify you have done everything necessary to allow serial communication between your pc and the mote. Remember that when using the MIB510 programming board that the switch on the very front of the board must be set to the '''OFF''' position in order to send messages from the mote to the pc.
+
+----
+
+Go ahead and open up <code>TestPrintfC</code> to see how this output is being generated.
+
+Upon receiving the booted event, the <code>Printf</code> service has already been started up and initialized and we are ready to start printing messages.  The following code prints the messages shown above and flushes them out over the serial line.
+  event void Boot.booted() {
+        printf("Hi I am writing to you from my TinyOS application!!\n");
+        printf("Here is a uint8: %u\n", dummyVar1);
+        printf("Here is a uint16: %u\n", dummyVar2);
+        printf("Here is a uint32: %lu\n", dummyVar3);
+        printfflush();
+  }
+
+Remember that the default printf buffer size is only 250 bytes, so don't try to print more than this at one time or you may end up cutting off the end of your string. This buffer size is configurable, however, by specifying the proper CFLAGS option in your Makefile.
+  CFLAGS += -DPRINTF_BUFFER_SIZE=XXX
+
+=Conclusion=
+
+A few points are worthy of note before jumping in and writing your own applications that use the functionality provided by the <code>printf</code> library.
+
+<ol>
+<li>In order to use the <code>printf</code> library, the <code>tos/lib/printf</code> directory must be in your include path. The easiest way to include it is by adding the following line directly within the Makefile of your top level application:</li>  
+ CFLAGS += -I$(TOSDIR)/lib/printf
+<li>Remember that changing the <code>printf</code> buffer size is done similarly: </li> 
+ CFLAGS += -DPRINTF_BUFFER_SIZE=XXX
+<li>You MUST be sure to #include <code>"printf.h"</code> header file in every component in which you would like to call the <code>printf()</code> command. Failure to do so will result in obscure error messages making it difficult to identify the problem.</li>
+</ol>
+
+Hopefully you now have everything you need to get going with the TinyOS <code>printf</code> library. All questions (or comments) about the use of this library should be directed to [mailto:tinyos-help@millennium.berkeley.edu tinyos-help] mailing list.
+
+Enjoy!!
+
+<br />
+
+----
+<center>
+
+< '''[[TinyOS Tutorials#Building a simple but full-featured application| Previous Lesson]]''' | '''[[# Overview| Top]]''' | '''[[Writing Low-Power Applications| Next Lesson]] >'''
+
+</center>
+
+[[Category:Tutorials]]

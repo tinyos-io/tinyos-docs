@@ -1,0 +1,85 @@
+This lesson introduces the two basic network primitives of Tinyos-2: Dissemination and Collection.<br />
+
+=Dissemination<br />=
+
+The goal of a dissemination protocol is to reliably deliver a piece of data to every node in the network. It allows administrators to reconfigure, query, and reprogram a network. Reliability is important because it makes the operation robust to temporary disconnections or high packet loss. Dissemination is fully explained in TEP 118.<br />
+
+In TinyOS 2.x, dissemination provides two interfaces: DisseminationValue and DisseminationUpdate. Let's take a look at these two interfaces:<br />
+tos/lib/net/DisseminationUpdate.nc:<br />
+ interface DisseminationUpdate<t> {<br />  command void change(t* newVal);<br />}
+tos/lib/net/DisseminationValue.nc:<br />
+ interface DisseminationValue<t> {<br />  command const t* get();<br />  event void changed();<br />}
+DisseminationUpdate is used by producers. The command '''''DisseminationUpdate.change()''''' should be called each time the producer wants to disseminate a new value, passing this new value as a parameter.<br /> DisseminationValue is for consumers. The event '''''DisseminationValue.changed()''''' is signalled each time the disseminated value is changed (the producer has called '''''change'''''), and the command'' '''get''''' allows to obtain this new value. <br />
+
+We build now a simple application (EasyDissemination) where one node (the producer) periodically disseminates the value of a counter to rest of the nodes in the network (consumers). As a first step, create a new directory in <tt>apps</tt> named <font face="monospace">EasyDissemination</font><nowiki>: </nowiki>
+ $ cd tinyos-2.x/apps<br />$ mkdir EasyDissemination<br />
+Inside this directory, create a file <code>EasyDisseminationC.nc</code>, which has this code:
+ <nowiki>#include <Timer.h></nowiki><br /><br />module EasyDisseminationC {<br />  uses interface Boot;<br/>  uses interface SplitControl as RadioControl;<br/>  uses interface StdControl as DisseminationControl;<br />  uses interface DisseminationValue<uint16_t> as Value;<br />  uses interface DisseminationUpdate<uint16_t> as Update;<br />  uses interface Leds;<br />  uses interface Timer<TMilli>;<br />}<br /><br />implementation {<br /><br />  uint16_t counter;<br /><br />  task void ShowCounter() {<br />    if (counter & 0x1) <br />      call Leds.led0On();<br />    else <br />      call Leds.led0Off();<br />    if (counter & 0x2) <br />      call Leds.led1On();<br />    else <br />      call Leds.led1Off();<br />    if (counter & 0x4) <br />      call Leds.led2On();<br />    else<br />      call Leds.led2Off();<br />  }<br /><br />  event void Boot.booted() {<br />    call RadioControl.start();<br />  }<br /><br />  event void RadioControl.startDone(error_t err) {<br />    if (err != SUCCESS) <br />      call RadioControl.start();<br />    else {<br />      call DisseminationControl.start();<br />      counter = 0;<br />      if ( TOS_NODE_ID  == 1 ) <br />        call Timer.startPeriodic(2000);<br />    }<br />  }<br /><br />  event void RadioControl.stopDone(error_t err) {}<br /><br />  event void Timer.fired() {<br />    counter = counter + 1;<br />    // show counter in leds<br />    post ShowCounter();<br />    // disseminate counter value<br />    call Update.change(&counter);<br />  }<br /><br />  event void Value.changed() {<br />    const uint16_t* newVal = call Value.get();<br />    // show new counter in leds<br />    counter = *newVal;<br />    post ShowCounter();<br />  }<br />}<br />
+
+We assume that the base station is the node with ID = 1. First note that the base station will periodically (every 2 seconds) increment a 3-bit counter, display the counter using its three leds, and disseminate it through the network. This is done using the change command provided in the DisseminationUpdate interface:<br />
+ call Update.change(&counter);
+Second, note that when a node receives a change notification, it updates its counter value and shows it on the leds:<br />
+ event void Value.changed() {<br />    const uint16_t* newVal = call Value.get();<br />    // show new counter in leds<br />    counter = *newVal;<br />    post ShowCounter();<br />  }<br />
+
+The <code>EasyDisseminationAppC.nc</code> provides the needed wiring:
+ configuration EasyDisseminationAppC {}<br />implementation {<br />  components EasyDisseminationC;<br /><br />  components MainC;<br />  EasyDisseminationC.Boot -> MainC;<br /><br />  components ActiveMessageC;<br />  EasyDisseminationC.RadioControl -> ActiveMessageC;<br /><br />  components DisseminationC;<br />  EasyDisseminationC.DisseminationControl -> DisseminationC;<br /><br />  components new DisseminatorC(uint16_t, 0x1234) as Diss16C;<br />  EasyDisseminationC.Value -> Diss16C;<br />  EasyDisseminationC.Update -> Diss16C;<br /><br />  components LedsC;<br />  EasyDisseminationC.Leds -> LedsC;<br /><br />  components new TimerMilliC();<br />  EasyDisseminationC.Timer -> TimerMilliC;<br />}<br />
+
+Note that both Dissemination interfaces we use are provided by the module DisseminatorC. <br /> This module provides the Dissemination service:<br />
+tos/lib/net/Dissemination/DisseminationC.nc:
+  generic configuration DisseminatorC(typedef t, uint16_t key) {<br />  provides interface DisseminationValue<t>;<br />  provides interface DisseminationUpdate<t>;<br />}<br />
+
+Note that we need to specify to the Disseminartor module a type t and a key. In our case, the value we want to disseminate is just an unsigned two-byte counter. The key allows to have different instances of DisseminatorC. <br /><br /> To compile this program we use the following Makefile:<br />
+ COMPONENT=EasyDisseminationAppC<br />CFLAGS += -I$(TOSDIR)/lib/net \<br />          -I$(TOSDIR)/lib/net/drip<br /><br />include $(MAKERULES)<br />
+Now install this program into several nodes (make sure you have one base station, that is, one node whose ID is 1) and see how the counter displayed in the base station is "disseminated" to all the nodes belonging to the network. You will also notice that dissemination works across resets, i.e., if you reset a node it will rapidly re-'synchronize' and display the correct value after it reboots. <br /><br /> For more information, read TEP118 [Dissemination].<br /><br />
+
+=Collection<br />=
+
+Collection is the complementary operation to disseminating and it consists in "collecting" the data generated in the network into a base station. The general approach used is to build one or more collection ''trees'', each of which is rooted at a base station. When a node has data which needs to be collected, it sends the data up the tree, and it forwards collection data that other nodes send to it. <br />
+
+We build now a simple application (EasyCollection) where nodes periodically send information to a base station which collects all the data.<br /> As a first step, create a new directory in <tt>apps</tt> named <font face="monospace">EasyCollection</font><nowiki>: </nowiki>
+ $ cd tinyos-2.x/apps<br />$ mkdir EasyCollection<br />
+Inside this directory, create a file <code>EasyCollectionC.nc</code>, which has the following code:
+ <nowiki>#include <Timer.h></nowiki><br /><br />module EasyCollectionC {<br />  uses interface Boot;<br />  uses interface SplitControl as RadioControl;<br />  uses interface StdControl as RoutingControl;<br />  uses interface Send;<br />  uses interface Leds;<br />  uses interface Timer<TMilli>;<br />  uses interface RootControl;<br />  uses interface Receive;<br />}<br />implementation {<br />  message_t packet;<br />  bool sendBusy = FALSE;<br /><br />  typedef nx_struct EasyCollectionMsg {<br />    nx_uint16_t data;<br />  } EasyCollectionMsg;<br /><br />  event void Boot.booted() {<br />    call RadioControl.start();<br />  }<br />  <br />  event void RadioControl.startDone(error_t err) {<br />    if (err != SUCCESS)<br />      call RadioControl.start();<br />    else {<br />      call RoutingControl.start();<br />      if (TOS_NODE_ID == 1) <br />	call RootControl.setRoot();<br />      else<br />	call Timer.startPeriodic(2000);<br />    }<br />  }<br /><br />  event void RadioControl.stopDone(error_t err) {}<br /><br />  void sendMessage() {<br />    EasyCollectionMsg* msg =<br />      (EasyCollectionMsg*)call Send.getPayload(&packet, sizeof(EasyCollectionMsg));<br />    msg->data = 0xAAAA;<br />    <br />    if (call Send.send(&packet, sizeof(EasyCollectionMsg)) != SUCCESS) <br />      call Leds.led0On();<br />    else <br />      sendBusy = TRUE;<br />  }<br />  event void Timer.fired() {<br />    call Leds.led2Toggle();<br />    if (!sendBusy)<br />      sendMessage();<br />  }<br />  <br />  event void Send.sendDone(message_t* m, error_t err) {<br />    if (err != SUCCESS) <br />      call Leds.led0On();<br />    sendBusy = FALSE;<br />  }<br />  <br />  event message_t* <br />  Receive.receive(message_t* msg, void* payload, uint8_t len) {<br />    call Leds.led1Toggle();    <br />    return msg;<br />  }<br />}<br />
+
+Lets take a look at this program. First note that all nodes turn on the radio into the Boot sequence:<br />
+   event void Boot.booted() {<br />    call RadioControl.start();<br />  }
+Once we are sure that the radio is on, we start the routing sub-system (that is, to generate the collection ''tree''):<br />
+ call RoutingControl.start();
+Next we need to specify the root of the collection tree, that is, the node that will receive all the data packets. For this, we use the interface RootControl:<br /> tos/lib/net/RootControl.nc<br />
+ interface RootControl {<br />    command error_t setRoot();<br />    command error_t unsetRoot();<br />    command bool isRoot();<br />}<br />
+This interface controls whether the current node is a root of the tree. Using the setRoot() command and assuming that the base station ID is 1, we select the root of the collection ''tree'' as follows:<br />
+ if (TOS_NODE_ID == 1) <br />    call RootControl.setRoot();  <br />else<br />    call Timer.startPeriodic(2000);
+The remaining nodes in the network periodically generate some data and send it to the base station. To send and receive data we use two interfaces that will be wired to the collection tree. That is, when we call the send command, the data packet will be sent through the collection tree. Similarly, the receive event will be only called in the root of the tree, that is, in the base station. When the base station receives a "collected" packet it just toggle a led. Now we will see how to wire these interfaces .<br /> The <code>EasyCollectionAppC.nc</code> provides the needed wiring:<br />
+ configuration EasyCollectionAppC {}<br />implementation {<br />  components EasyCollectionC, MainC, LedsC, ActiveMessageC;<br />  components CollectionC as Collector;<br />  components new CollectionSenderC(0xee);<br />  components new TimerMilliC();<br /><br />  EasyCollectionC.Boot -> MainC;<br />  EasyCollectionC.RadioControl -> ActiveMessageC;<br />  EasyCollectionC.RoutingControl -> Collector;<br />  EasyCollectionC.Leds -> LedsC;<br />  EasyCollectionC.Timer -> TimerMilliC;<br />  EasyCollectionC.Send -> CollectionSenderC;<br />  EasyCollectionC.RootControl -> Collector;<br />  EasyCollectionC.Receive -> Collector.Receive[0xee];<br />}<br />
+
+Most of the collection interfaces (RoutingControl, RootControl and Receive) are provided by the CollectionC module. The send interface is provided by CollectionSenderC which is a virtualized collection sender abstraction module.<br /> This is an extract of the signature of the CollectionC module and CollectionSenderC:<br /> tos/lib/net/ctp/CollectionC.nc<br />
+ configuration CollectionC {<br />  provides {<br />    interface StdControl;<br />    interface Send[uint8_t client];<br />    interface Receive[collection_id_t id];<br />    interface Receive as Snoop[collection_id_t];<br />    interface Intercept[collection_id_t id];<br /><br />    interface Packet;<br />    interface CollectionPacket;<br />    interface CtpPacket;<br /><br />    interface CtpInfo;<br />    interface CtpCongestion;<br />    interface RootControl;    <br />  }<br />
+tos/lib/net/ctp/CollectionSenderC:<br />
+   generic configuration CollectionSenderC(collection_id_t collectid) {<br />  provides {<br />    interface Send;<br />    interface Packet;<br />  }
+Note that the sender and receive interfaces requires a collection_id_t to differentiate different possible collections trees. <br /> Note also that the CollectionC module provides some other interfaces in addition to the ones used in this example. As we explained previously, the CollectionC module generates a collection tree that will be using for the routing. These interfaces can be used get information or modify this routing tree. For instance, if we want to obtain information about this tree we use the CtpInfo interface (see tos/lib/net/ctp/CtpInfo.nc) and if we want to indicate/query if any node/sink is congested we use the CtpCongestion interface (see tos/lib/net/ctp/CtpCongestion.nc)<br />
+
+Finally, to compile this program we create the following Makefile:<br />
+ COMPONENT=EasyCollectionAppC<br />CFLAGS += -I$(TOSDIR)/lib/net \<br />          -I$(TOSDIR)/lib/net/le \<br />          -I$(TOSDIR)/lib/net/ctp<br />include $(MAKERULES)<br />
+
+Now install this program into several nodes (make sure you have one base station, that is, one node whose ID is 1) and see how all the packets generated in the nodes are collected in the base station.<br /><br /> For more information, read TEP119 [Collection].<br /><br />
+
+=To experiment further <br />=
+
+If you want to experiment with a more complex application take a look at apps/tests/TestNetwork/ which combines dissemination and collection into a single application.<br /><br />
+
+For information about how to specify Device ID, please refer to [[Mote-mote radio communication]] or Lesson 4: Component Composition and Radio Communication[http://www.tinyos.net/tinyos-1.x/doc/tutorial/lesson4.html]
+
+=Related Documentation=
+
+* [http://www.tinyos.net/tinyos-2.x/doc/html/tep118.html TEP 118: Dissemination]
+* [http://www.tinyos.net/tinyos-2.x/doc/html/tep119.html TEP 119: Collection]<br />
+
+----
+
+<br />
+
+<center>
+
+< '''[[TOSSIM| Previous Lesson]]''' | '''[[#Dissemination| Top]]''' | '''[[TinyOS Toolchain| Next Lesson]] >'''
+
+</center>
