@@ -1,0 +1,17 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_OUTPUT_MODE	u-ctags	/u-ctags or e-ctags/
+!_TAG_PROGRAM_AUTHOR	Universal Ctags Team	//
+!_TAG_PROGRAM_NAME	Universal Ctags	/Derived from Exuberant Ctags/
+!_TAG_PROGRAM_URL	https://ctags.io/	/official site/
+!_TAG_PROGRAM_VERSION	0.0.0	/3fdf28bc/
+author	../conf.py	/^author = 'ABDULLATIF Mouhamadi'$/;"	kind:variable	line:22
+conf.py	../conf.py	1;"	kind:file	line:1
+copyright	../conf.py	/^copyright = '2019, ABDULLATIF Mouhamadi'$/;"	kind:variable	line:21
+exclude_patterns	../conf.py	/^exclude_patterns = []$/;"	kind:variable	line:42
+extensions	../conf.py	/^extensions = [$/;"	kind:variable	line:33
+html_static_path	../conf.py	/^html_static_path = ['_static']/;"	kind:variable	line:55
+html_theme	../conf.py	/^html_theme = 'alabaster'$/;"	kind:variable	line:50
+project	../conf.py	/^project = 'TinyOS'$/;"	kind:variable	line:20
+release	../conf.py	/^release = '1.0'$/;"	kind:variable	line:25
+templates_path	../conf.py	/^templates_path = ['_templates']$/;"	kind:variable	line:37
