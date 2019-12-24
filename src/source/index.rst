@@ -10,12 +10,12 @@ Welcome to TinyOS's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   1-introduction/index
-   2-installation/index
-   3-tutorials/index
-   4-teps/index
-   5-porting/index
-   
+   introduction/index
+   installation/index
+   tutorials/index
+   teps/index
+   porting/index
+
 
 Indices and tables
 ==================
