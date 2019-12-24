@@ -66,3 +66,15 @@ pandoc --from mediawiki --to rst -s lesson19 -o lesson19.rst
 pandoc --from mediawiki --to rst -s lesson20 -o lesson20.rst
 pandoc --from mediawiki --to rst -s lesson21 -o lesson21.rst
 ```
+
+
+
+
+
+# useful
+markup : 
+https://www.sphinx-doc.org/en/1.5/markup/inline.html
+
+
+
+

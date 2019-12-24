@@ -29,7 +29,7 @@ Compiling and Installing
 
 As a first exercise, you'll compile and install a very simple TinyOS
 application called Blink. If you don't have mote hardware, you can
-compile it for `TOSSIM <TOSSIM>`__, the TinyOS simulator.
+compile it for :doc:`TOSSIM <./lesson11>`, the TinyOS simulator.
 
 You compile TinyOS applications with the program ``make``. TinyOS uses a
 powerful and extensible make system that allows you to easily add new
@@ -44,14 +44,16 @@ simulation, type ``make micaz sim``.
 
 You should see output such as this:
 
-| ``mkdir -p build/telosb``
-| ``    compiling BlinkAppC to a telosb binary``
-| ``ncc -o build/telosb/main.exe -Os -O -mdisable-hwmul -Wall -Wshadow -DDEF_TOS_AM_GROUP=0x7d -Wnesc-all -target=telosb -fnesc-cfile=build/telosb/app.c -board=   BlinkAppC.nc -lm``
-| ``    compiled BlinkAppC to build/telosb/main.exe``
-| ``            2782 bytes in ROM``
-| ``              61 bytes in RAM``
-| ``msp430-objcopy --output-target=ihex build/telosb/main.exe build/telosb/main.ihex``
-| ``    writing TOS image``
+.. code-block:: bash
+
+  mkdir -p build/telosb
+      compiling BlinkAppC to a telosb binary
+  ncc -o build/telosb/main.exe -Os -O -mdisable-hwmul -Wall -Wshadow -DDEF_TOS_AM_GROUP=0x7d -Wnesc-all -target=telosb -fnesc-cfile=build/telosb/app.c -board=   BlinkAppC.nc -lm
+      compiled BlinkAppC to build/telosb/main.exe
+              2782 bytes in ROM
+                61 bytes in RAM
+  msp430-objcopy --output-target=ihex build/telosb/main.exe build/telosb/main.ihex
+      writing TOS image
 
 If you compile for TOSSIM, you will see a much longer message, as
 building TOSSIM requires several steps, such as building shared
@@ -64,8 +66,10 @@ Debugging Possible Errors
 
 If you see an error message along the lines of this:
 
-| :literal:`BlinkAppC.nc:46: syntax error before `new'`
-| ``make: *** [exe0] Error 1``
+.. code-block:: none
+
+  BlinkAppC.nc:46: syntax error before `new'`
+  make: *** [exe0] Error 1
 
 Then you are invoking an older version of the nesc compiler. Make sure
 you are using ``ncc`` version 1.4.2+ and ``nescc`` version 1.3.4+.
@@ -79,16 +83,11 @@ Now that we've compiled the application it's time to program the mote
 and run it. The next step depends on what family of mote you are
 programming.
 
--  `Installing on a mica-family mote (micaz, mica2,
-   mica2dot) <Getting_Started_with_TinyOS#Installing_on_a_mica-family_mote_(micaz,_mica2,_mica2dot)>`__
--  `Installing on telos-family mote (telosa,
-   telosb) <Getting_Started_with_TinyOS#Installing_on_telos-family_mote_(telosa,_telosb)>`__
--  `Installing on a TinyNode
-   mote <Getting_Started_with_TinyOS#Installing_on_a_TinyNode_mote>`__
--  `Installing on an eyesIFX-family
-   mote <Getting_Started_with_TinyOS#Installing_on_an_eyesIFX-family_mote>`__
--  `Installing on an
-   IntelMote2 <Getting_Started_with_TinyOS#Installing_on_an_IntelMote2>`__
+-  :ref:`Installing on a mica-family mote (micaz, mica2, mica2dot)<installing_on_a_mica_family_mote_micaz_mica2_mica2dot>`
+-  :ref:`Installing on telos-family mote (telosa, telosb) <installing_on_telos_family_mote_telosa_telosb>`
+-  :ref:`Installing on a TinyNode mote <installing_on_a_TinyNode_mote>`
+-  :ref:`Installing on an eyesIFX-family mote <installing_on_an_eyesIFX_family_mote>`
+-  :ref:`Installing on an IntelMote2 <installing_on_an_IntelMote2>`
 
 .. _installing_on_a_mica_family_mote_micaz_mica2_mica2dot:
 
