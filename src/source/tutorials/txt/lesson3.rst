@@ -21,8 +21,8 @@ communications and you will learn how to:
 -  Send a message buffer to the radio.
 -  Receive a message buffer from the radio.
 
-| 
-| =Introduction=
+Introduction
+===============================
 
 TinyOS provides a number of *interfaces* to abstract the underlying
 communications services and a number of *components* that *provide*
@@ -33,7 +33,7 @@ abstraction replaces the TinyOS 1.x ``TOS_Msg`` abstraction. Unlike
 TinyOS 1.x, the members of ``message_t`` are opaque, and therefore not
 accessed directly. Rather, ``message_t`` is an *abstract data type*,
 whose members are read and written using accessor and mutator functions
- [1]_.
+:doc:`TEP 111: message_t <../../teps/txt/tep111>`.
 
 .. _basic_communications_interfaces:
 
@@ -45,27 +45,27 @@ as the underlying data structure. Let's take a look at some of the
 interfaces that are in the ``tos/interfaces`` directory to familiarize
 ourselves with the general functionality of the communications system:
 
--  ```Packet`` <http://www.tinyos.net/tinyos-2.x/tos/interfaces/Packet.nc>`__
+-  `Packet <https://github.com/tinyos-io/tinyos-main/blob/master/tos/interfaces/Packet.nc>`__
    - Provides the basic accessors for the ``message_t`` abstract data
    type. This interface provides commands for clearing a message's
    contents, getting its payload length, and getting a pointer to its
    payload area.
--  ```Send`` <http://www.tinyos.net/tinyos-2.x/tos/interfaces/Send.nc>`__
+-  `Send <https://github.com/tinyos-io/tinyos-main/blob/master/tos/interfaces/Send.nc>`__
    - Provides the basic *address-free* message sending interface. This
    interface provides commands for sending a message and canceling a
    pending message send. The interface provides an event to indicate
    whether a message was sent successfully or not. It also provides
    convenience functions for getting the message's maximum payload as
    well as a pointer to a message's payload area.
--  ```Receive`` <http://www.tinyos.net/tinyos-2.x/tos/interfaces/Receive.nc>`__
+-  `Receive <https://github.com/tinyos-io/tinyos-main/blob/master/tos/interfaces/Receive.nc>`__
    - Provides the basic message reception interface. This interface
    provides an event for receiving messages. It also provides, for
    convenience, commands for getting a message's payload length and
    getting a pointer to a message's payload area.
--  ```PacketAcknowledgements`` <http://www.tinyos.net/tinyos-2.x/tos/interfaces/PacketAcknowledgements.nc>`__
+-  `PacketAcknowledgements <https://github.com/tinyos-io/tinyos-main/blob/master/tos/interfaces/PacketAcknowledgements.nc>`__
    - Provides a mechanism for requesting acknowledgements on a
    per-packet basis.
--  ```RadioTimeStamping`` <http://www.tinyos.net/tinyos-2.x/tos/interfaces/RadioTimeStamping.nc>`__
+-  `RadioTimeStamping <https://github.com/tinyos-io/tinyos-main/blob/master/tos/interfaces/RadioTimeStamping.nc>`__
    - Provides time stamping information for radio transmission and
    reception.
 
@@ -85,14 +85,14 @@ to address packets to particular motes. Additional interfaces, also
 located in the ``tos/interfaces`` directory, were introduced to support
 the AM services:
 
--  ```AMPacket`` <http://www.tinyos.net/tinyos-2.x/tos/interfaces/AMPacket.nc>`__
+-  `AMPacket <https://github.com/tinyos-io/tinyos-main/blob/master/tos/interfaces/AMPacket.nc>`__
    - Similar to ``Packet``, provides the basic AM accessors for the
    ``message_t`` abstract data type. This interface provides commands
    for getting a node's AM address, an AM packet's destination, and an
    AM packet's type. Commands are also provided for setting an AM
    packet's destination and type, and checking whether the destination
    is the local node.
--  ```AMSend`` <http://www.tinyos.net/tinyos-2.x/tos/interfaces/AMSend.nc>`__
+-  `AMSend <https://github.com/tinyos-io/tinyos-main/blob/master/tos/interfaces/AMSend.nc>`__
    - Similar to ``Send``, provides the basic Active Message sending
    interface. The key difference between ``AMSend`` and ``Send`` is that
    ``AMSend`` takes a destination AM address in its ``send`` command.
@@ -112,17 +112,17 @@ because your code needs to specify both the *interfaces* your
 application *uses* as well as the *components* which *provide*
 (implement) those interfaces:
 
--  ```AMReceiverC`` <http://www.tinyos.net/tinyos-2.x/tos/system/AMReceiverC.nc>`__
+-  `AMReceiverC <https://github.com/tinyos-io/tinyos-main/blob/master/tos/system/AMReceiverC.nc>`__
    - Provides the following interfaces: ``Receive``, ``Packet``, and
    ``AMPacket``.
--  ```AMSenderC`` <http://www.tinyos.net/tinyos-2.x/tos/system/AMSenderC.nc>`__
+-  `AMSenderC <https://github.com/tinyos-io/tinyos-main/blob/master/tos/system/AMSenderC.nc>`__
    - Provides ``AMSend``, ``Packet``, ``AMPacket``, and
    ``PacketAcknowledgements`` as ``Acks``.
--  ```AMSnooperC`` <http://www.tinyos.net/tinyos-2.x/tos/system/AMSnooperC.nc>`__
+-  `AMSnooperC <https://github.com/tinyos-io/tinyos-main/blob/master/tos/system/AMSnooperC.nc>`__
    - Provides ``Receive``, ``Packet``, and ``AMPacket``.
--  ```AMSnoopingReceiverC`` <http://www.tinyos.net/tinyos-2.x/tos/system/AMSnoopingReceiverC.nc>`__
+-  `AMSnoopingReceiverC <https://github.com/tinyos-io/tinyos-main/blob/master/tos/system/AMSnoopingReceiverC.nc>`__
    - Provides ``Receive``, ``Packet``, and ``AMPacket``.
--  ```ActiveMessageAddressC`` <http://www.tinyos.net/tinyos-2.x/tos/system/ActiveMessageAddressC.nc>`__
+-  `ActiveMessageAddressC <https://github.com/tinyos-io/tinyos-main/blob/master/tos/system/ActiveMessageAddressC.nc>`__
    - Provides commands to get and set the node's active message address.
    This interface is not for general use and changing a node's active
    message address can break the network stack, so avoid using it unless
@@ -143,21 +143,21 @@ interfaces presented above. Platform-specific versions of
 shared by multiple platforms (e.g. Telos and MicaZ) include:
 
 -  ``ActiveMessageC`` for the
-   `eyesIFX <http://www.tinyos.net/tinyos-2.x/tos/platforms/eyesIFX/ActiveMessageC.nc>`__
+   `eyesIFX <https://github.com/tinyos-io/tinyos-main/blob/master/tos/platforms/eyesIFX/ActiveMessageC.nc>`__
    platform is implemented by
-   ```Tda5250ActiveMessageC`` <http://www.tinyos.net/tinyos-2.x/tos/chips/tda5250/Tda5250ActiveMessageC.nc>`__.
+   `Tda5250ActiveMessageC <https://github.com/tinyos-io/tinyos-main/blob/master/tos/chips/tda5250/Tda5250ActiveMessageC.nc>`__.
 -  ``ActiveMessageC`` for the
-   `intelmote2 <http://www.tinyos.net/tinyos-2.x/tos/platforms/intelmote2/ActiveMessageC.nc>`__,
-   `micaz <http://www.tinyos.net/tinyos-2.x/tos/platforms/micaz/ActiveMessageC.nc>`__,
-   `telosa <http://www.tinyos.net/tinyos-2.x/tos/platforms/telosa/ActiveMessageC.nc>`__,
+   `intelmote2 <https://github.com/tinyos-io/tinyos-main/blob/master/tos/platforms/intelmote2/ActiveMessageC.nc>`__,
+   `micaz <https://github.com/tinyos-io/tinyos-main/blob/master/tos/platforms/micaz/ActiveMessageC.nc>`__,
+   `telosa <https://github.com/tinyos-io/tinyos-main/blob/master/tos/platforms/telosa/ActiveMessageC.nc>`__,
    and
-   `telosb <http://www.tinyos.net/tinyos-2.x/tos/platforms/telosa/ActiveMessageC.nc>`__
+   `telosb <https://github.com/tinyos-io/tinyos-main/blob/master/tos/platforms/telosa/ActiveMessageC.nc>`__
    are all implemented by
-   ```CC2420ActiveMessageC`` <http://www.tinyos.net/tinyos-2.x/tos/chips/cc2420/CC2420ActiveMessageC.nc>`__.
+   `CC2420ActiveMessageC <https://github.com/tinyos-io/tinyos-main/blob/master/tos/chips/cc2420/CC2420ActiveMessageC.nc>`__.
 -  ``ActiveMessageC`` for the
-   `mica2 <http://www.tinyos.net/tinyos-2.x/tos/platforms/mica2/ActiveMessageC.nc>`__
+   `mica2 <https://github.com/tinyos-io/tinyos-main/blob/master/tos/platforms/mica2/ActiveMessageC.nc>`__
    platform is implemented by
-   ```CC1000ActiveMessageC`` <http://www.tinyos.net/tinyos-2.x/tos/chips/cc1000/CC1000ActiveMessageC.nc>`__.
+   `CC1000ActiveMessageC <https://github.com/tinyos-io/tinyos-main/blob/master/tos/chips/cc1000/CC1000ActiveMessageC.nc>`__.
 
 .. _the_tinyos_2.0_message_buffer:
 
@@ -168,14 +168,17 @@ TinyOS 2.0 introduces a new message buffer abstraction called
 ``message_t``. If you are familiar with earlier versions of TinyOS, you
 need to know that ``message_t`` replaces ``TOS_Msg``. The ``message_t``
 structure is defined in
-```tos/types/message.h`` <http://www.tinyos.net/tinyos-2.x/tos/types/message.h>`__.
+`tos/types/message.h <https://github.com/tinyos-io/tinyos-main/blob/master/tos/types/message.h>`__.
 
-| ``typedef nx_struct message_t {``
-| ``  nx_uint8_t header[sizeof(message_header_t)];``
-| ``  nx_uint8_t data[TOSH_DATA_LENGTH];``
-| ``  nx_uint8_t footer[sizeof(message_footer_t)];``
-| ``  nx_uint8_t metadata[sizeof(message_metadata_t)];``
-| ``} message_t;``
+.. code-block:: nesc
+
+  typedef nx_struct message_t {
+    nx_uint8_t header[sizeof(message_header_t)];
+    nx_uint8_t data[TOSH_DATA_LENGTH];
+    nx_uint8_t footer[sizeof(message_footer_t)];
+    nx_uint8_t metadata[sizeof(message_metadata_t)];
+  } message_t;
+
 
 **Note: The header, footer, and metadata fields are all opaque and must
 not be accessed directly. It is important to access the ``message_t``
@@ -194,8 +197,7 @@ We will now create a simple application that increments a counter,
 displays the counter's three least significant bits on the three LEDs,
 and sends a message with the counter value over the radio. Our
 implementation will use a single timer and a counter, in a way similar
-to the ``BlinkSingle`` example from `lesson
-2 <Modules_and_the_TinyOS_Execution_Model>`__.
+to the ``BlinkSingle`` example from :doc:`lesson 2 <./lesson2>`.
 
 .. _reimplementing_blink:
 
@@ -205,35 +207,36 @@ Reimplementing Blink
 As a first step, we can reimplement ``Blink`` using a single timer and
 counter. Create a new directory in ``apps`` named ``BlinkToRadio``:
 
-| ``$ cd tinyos-2.x/apps``
-| ``$ mkdir BlinkToRadio``
+.. code-block:: bash
+
+  $ cd tinyos-2.x/apps
+  $ mkdir BlinkToRadio
 
 Inside this directory, create a file ``BlinkToRadioC.nc``, which has
 this code:
 
-| ````
-| `` #include <Timer.h>``
-| `` #include "BlinkToRadio.h"``
-| `` ``
-| `` module BlinkToRadioC {``
-| ``   uses interface Boot;``
-| ``   uses interface Leds;``
-| ``   uses interface Timer<TMilli> as Timer0;``
-| `` }``
-| `` implementation {``
-| ``   uint16_t counter = 0;``
-| `` ``
-| ``   event void Boot.booted() {``
-| ``     call Timer0.startPeriodic(TIMER_PERIOD_MILLI);``
-| ``   }``
-| `` ``
-| ``   event void Timer0.fired() {``
-| ``     counter++;``
-| ``     call Leds.set(counter);``
-| ``   }``
-| `` }``
-| `` ``
-| `` ``
+.. code-block:: nesc
+
+   #include <Timer.h>
+   #include "BlinkToRadio.h"
+  
+   module BlinkToRadioC {
+     uses interface Boot;
+     uses interface Leds;
+     uses interface Timer<TMilli> as Timer0;
+   }
+   implementation {
+     uint16_t counter = 0;
+  
+     event void Boot.booted() {
+       call Timer0.startPeriodic(TIMER_PERIOD_MILLI);
+     }
+  
+     event void Timer0.fired() {
+       counter++;
+       call Leds.set(counter);
+     }
+   }
 
 Let's look at a few specific lines in this program. First, notice the C
 preprocessor ``include`` directive on the first line. This directive
@@ -260,16 +263,16 @@ Finally, note the ``call Timer0.startPeriodic(TIMER_PERIOD_MILLI)`` line
 in the ``Boot.booted`` function. The value of ``TIMER_PERIOD_MILLI`` is
 defined in the ``BlinkToRadio.h`` header file:
 
-| ````
-| `` #ifndef BLINKTORADIO_H``
-| `` #define BLINKTORADIO_H``
-| `` ``
-| `` enum {``
-| ``   TIMER_PERIOD_MILLI = 250``
-| `` };``
-| `` ``
-| `` #endif``
-| `` ``
+.. code-block:: nesc
+
+   #ifndef BLINKTORADIO_H
+   #define BLINKTORADIO_H
+  
+   enum {
+     TIMER_PERIOD_MILLI = 250
+   };
+  
+   #endif
 
 ``BlinkToRadio.h`` is a pretty standard header file but there are two
 things to note here. First, notice the use of the ``ifndef``,
@@ -291,23 +294,24 @@ file is needed to *wire* the interfaces that the implementation ``uses``
 to the actual components which ``provide`` these interfaces. The
 ``BlinkToRadioAppC.nc`` provides the needed wiring:
 
-| ````
-| `` #include <Timer.h>``
-| `` #include "BlinkToRadio.h"``
-| `` ``
-| `` configuration BlinkToRadioAppC {``
-| `` }``
-| `` implementation {``
-| ``   components MainC;``
-| ``   components LedsC;``
-| ``   components BlinkToRadioC as App;``
-| ``   components new TimerMilliC() as Timer0;``
-| `` ``
-| ``   App.Boot -> MainC;``
-| ``   App.Leds -> LedsC;``
-| ``   App.Timer0 -> Timer0;``
-| `` }``
-| `` ``
+.. code-block:: nesc
+
+   #include <Timer.h>
+   #include "BlinkToRadio.h"
+  
+   configuration BlinkToRadioAppC {
+   }
+   implementation {
+     components MainC;
+     components LedsC;
+     components BlinkToRadioC as App;
+     components new TimerMilliC() as Timer0;
+  
+     App.Boot -> MainC;
+     App.Leds -> LedsC;
+     App.Timer0 -> Timer0;
+   }
+
 
 The ``BlinkToRadioAppC`` should look familiar to you since it is
 essentially a subset of the ``Blink`` application/configuration from an
@@ -317,8 +321,10 @@ These three files constitute all of the application code: the only other
 thing it needs is a Makefile. Create a file named ``Makefile``. For an
 application as simple as this one, the Makefile is very short:
 
-| ``COMPONENT=BlinkToRadioAppC``
-| ``include $(MAKERULES)``
+.. code-block:: bash
+
+  COMPONENT=BlinkToRadioAppC
+  include $(MAKERULES)
 
 The first line tells the TinyOS make system that the top-level
 application component is BlinkToRadioAppC. The second line loads in the
@@ -350,10 +356,12 @@ straightforward. To define a message structure with a ``uint16_t`` node
 id and a ``uint16_t`` counter in the payload, we add the following lines
 to ``BlinkToRadio.h``, just before the ``endif`` directive:
 
-| ``typedef nx_struct BlinkToRadioMsg {``
-| ``  nx_uint16_t nodeid;``
-| ``  nx_uint16_t counter;``
-| ``} BlinkToRadioMsg;``
+.. code-block:: nesc
+
+  typedef nx_struct BlinkToRadioMsg {
+    nx_uint16_t nodeid;
+    nx_uint16_t counter;
+  } BlinkToRadioMsg;
 
 If this code doesn't look even vaguely familiar, you should spend a few
 minutes reading up on C structures. If you are familiar with C
@@ -441,14 +449,16 @@ Let's walk through the steps, one-by-one:
 #. **Update the ``module`` block in the ``BlinkToRadioC.nc`` by adding
    ``uses`` statements for the interfaces we need:**
 
-module BlinkToRadioC {
+.. code-block:: nesc
 
-| ``  ...``
-| ``  uses interface Packet;``
-| ``  uses interface AMPacket;``
-| ``  uses interface AMSend;``
-| ``  uses interface SplitControl as AMControl;``
-| ``}``
+  module BlinkToRadioC {
+
+    ...
+    uses interface Packet;
+    uses interface AMPacket;
+    uses interface AMSend;
+    uses interface SplitControl as AMControl;
+  }
 
 Note that ``SplitControl`` has been renamed to ``AMControl`` using the
 ``as`` keyword. nesC allows interfaces to be renamed in this way for
@@ -462,20 +472,12 @@ stopping components, but the name ``AMControl`` is a mnemonic to remind
 us that the particular instance of ``SplitControl`` is used to control
 the ``ActiveMessageC`` component.
 
-.. raw:: html
-
-   <li>
-
 | **Declare any new variables and add any needed initialization code.**
 | First, we need to declare some new module-scope variables. We need a
   ``message_t`` to hold our data for transmission. We also need a flag
   to keep track of when the radio is busy sending. These declarations
   need to be added in the ``implementation`` block of
   ``BlinkToRadioC.nc``:
-
-.. raw:: html
-
-   </li>
 
 | ``implementation {``
 | ``  bool busy = FALSE;``
@@ -938,7 +940,7 @@ Lesson <Mote-PC_serial_communication_and_SerialForwarder>`__\ **>**
 
 .. [1]
    `TEP 111:
-   message_t <http://www.tinyos.net/tinyos-2.x/doc/html/tep111.html>`__
+   message_t <https://github.com/tinyos-io/tinyos-main/blob/master/doc/html/tep111.html>`__
 
 .. [2]
 
