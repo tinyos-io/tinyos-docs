@@ -51,35 +51,38 @@ way two components can directly interact is through interfaces. Let's
 revisit the Blink application. Here is the Blink module BlinkC's
 implementation in its entirety:
 
-| ``apps/Blink/BlinkC.nc:``
-| ``module BlinkC @safe(){``
-| ``  uses interface Timer``\ \ `` as Timer0;``
-| ``  uses interface Timer``\ \ `` as Timer1;``
-| ``  uses interface Timer``\ \ `` as Timer2;``
-| ``  uses interface Leds;``
-| ``  uses interface Boot;``
-| ``}``
-| ``implementation``
-| ``{``
-| ``  event void Boot.booted()``
-| ``  {``
-| ``    call Timer0.startPeriodic( 250 );``
-| ``    call Timer1.startPeriodic( 500 );``
-| ``    call Timer2.startPeriodic( 1000 );``
-| ``  }``
-| ``  event void Timer0.fired()``
-| ``  {``
-| ``    call Leds.led0Toggle();``
-| ``  }``
-| ``  event void Timer1.fired()``
-| ``  {``
-| ``    call Leds.led1Toggle();``
-| ``  }``
-| ``  event void Timer2.fired()``
-| ``  {``
-| ``    call Leds.led2Toggle();``
-| ``  }``
-| ``}``
+.. code-block:: nesc
+
+  apps/Blink/BlinkC.nc::
+  module BlinkC @safe(){
+    uses interface Timer<TMilli> as Timer0;
+    uses interface Timer<TMilli> as Timer1;
+    uses interface Timer<TMilli> as Timer2;
+    uses interface Leds;
+    uses interface Boot;
+  }
+  implementation
+  {
+    event void Boot.booted()
+    {
+      call Timer0.startPeriodic( 250 );
+      call Timer1.startPeriodic( 500 );
+      call Timer2.startPeriodic( 1000 );
+    }
+    event void Timer0.fired()
+    {
+      call Leds.led0Toggle();
+    }
+    event void Timer1.fired()
+    {
+      call Leds.led1Toggle();
+    }
+    event void Timer2.fired()
+    {
+      call Leds.led2Toggle();
+    }
+  }
+
 
 BlinkC does not allocate any state. Let's change it so that its logic is
 a little different: rather than blink the LEDs from three different
@@ -87,35 +90,41 @@ timers, we'll blink them with a single timer and keep some state to know
 which ones to toggle. Make a copy of the Blink application,
 ``BlinkSingle``, and go into its directory.
 
-| ``$ cd tinyos-2.x/apps``
-| ``$ cp -R Blink BlinkSingle``
-| ``$ cd BlinkSingle ``
+.. code-block:: bash
+
+  $ cd tinyos-2.x/apps
+  $ cp -R Blink BlinkSingle
+  $ cd BlinkSingle
 
 Open the BlinkC module in an editor. The first step is to comment out
 the LED toggles in Timer1 and Timer2:
 
-| ``  event void Timer1.fired()``
-| ``  {``
-| ``    // call Leds.led1Toggle();``
-| ``  }``
-| ``  event void Timer2.fired()``
-| ``  {``
-| ``    // call Leds.led2Toggle();``
-| ``  }``
+.. code-block:: nesc
+
+    event void Timer1.fired()
+    {
+      // call Leds.led1Toggle();
+    }
+    event void Timer2.fired()
+    {
+      // call Leds.led2Toggle();
+    }
 
 The next step is to add some state to BlinkC, a single byte. Just like
 in C, variables and functions must be declared before they are used, so
 put it at the beginning of the implementation:
 
-| ``implementation``
-| ``{``
-| ``  uint8_t counter = 0;``
-| ``  event void Boot.booted()``
-| ``  {``
-| ``    call Timer0.startPeriodic( 250 );``
-| ``    call Timer1.startPeriodic( 500 );``
-| ``    call Timer2.startPeriodic( 1000 );``
-| ``  }``
+.. code-block:: nesc
+
+  implementation
+  {
+    uint8_t counter = 0;
+    event void Boot.booted()
+    {
+      call Timer0.startPeriodic( 250 );
+      call Timer1.startPeriodic( 500 );
+      call Timer2.startPeriodic( 1000 );
+    }
 
 Rather than the standard C names of ``int``, ``long``, or ``char``,
 TinyOS code uses more explicit types, which declare their size. In
@@ -127,19 +136,11 @@ Additionally, TinyOS code often uses unsigned values heavily, as
 wrap-arounds to negative numbers can often lead to very unintended
 consequences. The commonly used types are:
 
-.. raw:: html
-
-   <center>
-
 ======== =========== ============ ============ ============
 \        8 bits      16 bits      32 bits      64 bits
 signed   ``int8_t``  ``int16_t``  ``int32_t``  ``int64_t``
 unsigned ``uint8_t`` ``uint16_t`` ``uint32_t`` ``uint64_t``
 ======== =========== ============ ============ ============
-
-.. raw:: html
-
-   </center>
 
 There is also a ``bool`` type. You can use the standard C types, but
 doing so might raise cross-platform issues. Also, ``uint32_t`` is often
@@ -152,36 +153,40 @@ byte, ``counter``. When the mote boots, the ``counter`` will be
 initialized to zero. The next step is to make it that when Timer0 fires,
 it increments ``counter`` and displays the result:
 
-| ``  event void Timer0.fired()``
-| ``  {``
-| ``    counter++;``
-| ``    if (counter & 0x1) {``
-| ``      call Leds.led0On();``
-| ``    }``
-| ``    else {``
-| ``      call Leds.led0Off();``
-| ``    }``
-| ``    if (counter & 0x2) {``
-| ``      call Leds.led1On();``
-| ``    }``
-| ``    else {``
-| ``      call Leds.led1Off();``
-| ``    }``
-| ``    if (counter & 0x4) {``
-| ``      call Leds.led2On();``
-| ``    }``
-| ``    else {``
-| ``      call Leds.led2Off();``
-| ``    }``
-| ``  }``
+.. code-block:: nesc
+
+    event void Timer0.fired()
+    {
+      counter++;
+      if (counter & 0x1) {
+        call Leds.led0On();
+      }
+      else {
+        call Leds.led0Off();
+      }
+      if (counter & 0x2) {
+        call Leds.led1On();
+      }
+      else {
+        call Leds.led1Off();
+      }
+      if (counter & 0x4) {
+        call Leds.led2On();
+      }
+      else {
+        call Leds.led2Off();
+      }
+    }
 
 Another, more succinct way to do it is to use the ``set`` command:
 
-| ``  event void Timer0.fired()``
-| ``  {``
-| ``    counter++;``
-| ``    call Leds.set(counter);``
-| ``  }``
+.. code-block:: nesc
+
+    event void Timer0.fired()
+    {
+      counter++;
+      call Leds.set(counter);
+    }
 
 Compile your program and install it on a mote. You'll see that it
 behaves just as before, except that now the LEDs are being driven by a
@@ -192,54 +197,60 @@ and Timer2: they waste CPU resources and memory. Open BlinkC again and
 remove them from its signature and implementation. You should have
 something that looks like this:
 
-| ``module BlinkC @safe(){``
-| ``  uses interface Timer``\ \ `` as Timer0;``
-| ``  uses interface Leds;``
-| ``  uses interface Boot;``
-| ``}``
-| ``implementation``
-| ``{``
-| ``  uint8_t counter = 0;``
-| ``  event void Boot.booted()``
-| ``  {``
-| ``    call Timer0.startPeriodic( 250 );``
-| ``  }``
-| ``  event void Timer0.fired()``
-| ``  {``
-| ``    counter++;``
-| ``    call Leds.set(counter);``
-| ``  }``
-| ``}``
+.. code-block:: nesc
+
+  module BlinkC @safe(){
+    uses interface Timer<TMilli> as Timer0;
+    uses interface Leds;
+    uses interface Boot;
+  }
+  implementation
+  {
+    uint8_t counter = 0;
+    event void Boot.booted()
+    {
+      call Timer0.startPeriodic( 250 );
+    }
+    event void Timer0.fired()
+    {
+      counter++;
+      call Leds.set(counter);
+    }
+  }
 
 Try to compile the application: nesC will throw an error, because the
 configuration BlinkAppC is wiring to interfaces on BlinkC that no longer
 exist (Timer1 and Timer2):
 
-| ``dark /root/src/tinyos-2.x/apps/BlinkSingle -5-> make micaz``
-| ``mkdir -p build/micaz``
-| ``    compiling BlinkAppC to a micaz binary``
-| ``ncc -o build/micaz/main.exe -Os -finline-limit=100000 -Wall -Wshadow -DDEF_TOS_AM_GROUP=0x7d -Wnesc-all -target=micaz ``
-| ``-fnesc-cfile=build/micaz/app.c -board=micasb  -fnesc-dump=wiring -fnesc-dump='interfaces(!abstract())' ``
-| ``-fnesc-dump='referenced(interfacedefs, components)' -fnesc-dumpfile=build/micaz/wiring-check.xml BlinkAppC.nc -lm``
-| :literal:`In component `BlinkAppC':`
-| :literal:`BlinkAppC.nc:54: cannot find `Timer1'`
-| :literal:`BlinkAppC.nc:55: cannot find `Timer2'`
-| ``make: *** [exe0] Error 1``
+.. code-block:: bash
+
+  dark /root/src/tinyos-2.x/apps/BlinkSingle -5-> make micaz
+  mkdir -p build/micaz
+      compiling BlinkAppC to a micaz binary
+  ncc -o build/micaz/main.exe -Os -finline-limit=100000 -Wall -Wshadow -DDEF_TOS_AM_GROUP=0x7d -Wnesc-all -target=micaz
+  -fnesc-cfile=build/micaz/app.c -board=micasb  -fnesc-dump=wiring -fnesc-dump='interfaces(!abstract())'
+  -fnesc-dump='referenced(interfacedefs, components)' -fnesc-dumpfile=build/micaz/wiring-check.xml BlinkAppC.nc -lm
+  In component `BlinkAppC':`
+  BlinkAppC.nc:54: cannot find `Timer1'`
+  BlinkAppC.nc:55: cannot find `Timer2'`
+  make: *** [exe0] Error 1
 
 Open BlinkAppC and remove the two Timers and their wirings. Compile the
 application:
 
-| ``mkdir -p build/micaz``
-| ``    compiling BlinkAppC to a micaz binary``
-| ``ncc -o build/micaz/main.exe -Os -finline-limit=100000 -Wall -Wshadow -DDEF_TOS_AM_GROUP=0x7d -Wnesc-all -target=micaz ``
-| ``-fnesc-cfile=build/micaz/app.c -board=micasb  -fnesc-dump=wiring -fnesc-dump='interfaces(!abstract())' ``
-| ``-fnesc-dump='referenced(interfacedefs, components)' -fnesc-dumpfile=build/micaz/wiring-check.xml BlinkAppC.nc -lm``
-| ``    compiled BlinkAppC to build/micaz/main.exe``
-| ``            2428 bytes in ROM``
-| ``              39 bytes in RAM``
-| ``avr-objcopy --output-target=srec build/micaz/main.exe build/micaz/main.srec``
-| ``avr-objcopy --output-target=ihex build/micaz/main.exe build/micaz/main.ihex``
-| ``    writing TOS image``
+.. code-block:: bash
+
+  mkdir -p build/micaz
+      compiling BlinkAppC to a micaz binary
+  ncc -o build/micaz/main.exe -Os -finline-limit=100000 -Wall -Wshadow -DDEF_TOS_AM_GROUP=0x7d -Wnesc-all -target=micaz
+  -fnesc-cfile=build/micaz/app.c -board=micasb  -fnesc-dump=wiring -fnesc-dump='interfaces(!abstract())'
+  -fnesc-dump='referenced(interfacedefs, components)' -fnesc-dumpfile=build/micaz/wiring-check.xml BlinkAppC.nc -lm
+      compiled BlinkAppC to build/micaz/main.exe
+              2428 bytes in ROM
+                39 bytes in RAM
+  avr-objcopy --output-target=srec build/micaz/main.exe build/micaz/main.srec
+  avr-objcopy --output-target=ihex build/micaz/main.exe build/micaz/main.ihex
+      writing TOS image
 
 If you compare the ROM and RAM sizes with the unmodified Blink
 application, you should see that they are a bit smaller: TinyOS is only
@@ -251,49 +262,51 @@ one timer.
 Interfaces, Commands, and Events
 ================================
 
-Go back to ``tinyos-2.x/apps/Blink``. In lesson 1 we learned that if a
+Go back to ``tinyos-main/apps/Blink``. In lesson 1 we learned that if a
 component uses an interface, it can call the interface's commands and
 must implement handlers for its events. We also saw that the BlinkC
 component uses the Timer, Leds, and Boot interfaces. Let's take a look
 at those interfaces:
 
-| ``tos/interfaces/Boot.nc:``
-| ``interface Boot {``
-| ``  event void booted();``
-| ``}``
+.. code-block:: nesc
 
-| ``tos/interfaces/Leds.nc:``
-| ``interface Leds {``
-| ``  /**``
-| ``   * Turn LED n on, off, or toggle its present state.``
-| ``   */``
-| ``  async command void led0On();``
-| ``  async command void led0Off();``
-| ``  async command void led0Toggle();``
-| ``  async command void led1On();``
-| ``  async command void led1Off();``
-| ``  async command void led1Toggle();``
-| ``  async command void led2On();``
-| ``  async command void led2Off();``
-| ``  async command void led2Toggle();``
-| ``  /**``
-| ``   * Get/Set the current LED settings as a bitmask. Each bit corresponds to``
-| ``   * whether an LED is on; bit 0 is LED 0, bit 1 is LED 1, etc.``
-| ``   */``
-| ``  async command uint8_t get();``
-| ``  async command void set(uint8_t val);``
-| ``}``
+  tos/interfaces/Boot.nc:
+  interface Boot {
+    event void booted();
+  }
 
-| ``tos/lib/timer/Timer.nc: ``
-| ``interface Timer``
-| ``{``
-| ``  // basic interface``
-| ``  command void startPeriodic( uint32_t dt );``
-| ``  command void startOneShot( uint32_t dt );``
-| ``  command void stop();``
-| ``  event void fired();``
-| ``  // extended interface omitted (all commands)``
-| ``}``
+  tos/interfaces/Leds.nc:
+  interface Leds {
+    /**
+     * Turn LED n on, off, or toggle its present state.
+     */
+    async command void led0On();
+    async command void led0Off();
+    async command void led0Toggle();
+    async command void led1On();
+    async command void led1Off();
+    async command void led1Toggle();
+    async command void led2On();
+    async command void led2Off();
+    async command void led2Toggle();
+    /**
+     * Get/Set the current LED settings as a bitmask. Each bit corresponds to
+     * whether an LED is on; bit 0 is LED 0, bit 1 is LED 1, etc.
+     */
+    async command uint8_t get();
+    async command void set(uint8_t val);
+  }
+
+  tos/lib/timer/Timer.nc: 
+  interface Timer
+  {
+    // basic interface
+    command void startPeriodic( uint32_t dt );
+    command void startOneShot( uint32_t dt );
+    command void stop();
+    event void fired();
+    // extended interface omitted (all commands)
+  }
 
 Looking over the interfaces for ``Boot``, ``Leds``, and ``Timer``, we
 can see that since ``BlinkC`` uses those interfaces it must implement
@@ -302,13 +315,15 @@ event. The ``Leds`` interface signature does not include any events, so
 ``BlinkC`` need not implement any in order to call the Leds commands.
 Here, again, is ``BlinkC``'s implementation of ``Boot.booted()``:
 
-| ``apps/Blink/BlinkC.nc: ``
-| ``  event void Boot.booted()``
-| ``  {``
-| ``    call Timer0.startPeriodic( 250 );``
-| ``    call Timer1.startPeriodic( 500 );``
-| ``    call Timer2.startPeriodic( 1000 );``
-| ``  }``
+.. code-block:: nesc
+
+  apps/Blink/BlinkC.nc:
+    event void Boot.booted()
+    {
+      call Timer0.startPeriodic( 250 );
+      call Timer1.startPeriodic( 500 );
+      call Timer2.startPeriodic( 1000 );
+    }
 
 ``BlinkC`` uses 3 instances of the TimerMilliC component, wired to the
 interfaces ``Timer0``, ``Timer1``, and ``Timer2``. The ``Boot.booted()``
@@ -327,20 +342,22 @@ signals the Boot.booted() event.
 
 Next, look at the implementation of the ``Timer.fired()``:
 
-| ``apps/Blink/BlinkC.nc: ``
-| ``  event void Timer0.fired()``
-| ``  {``
-| ``    call Leds.led0Toggle();``
-| ``  }``
-| ``  event void Timer1.fired()``
-| ``  {``
-| ``    call Leds.led1Toggle();``
-| ``  }``
-| ``  event void Timer2.fired()``
-| ``  {``
-| ``    call Leds.led2Toggle();``
-| ``  }``
-| ``}``
+.. code-block:: nesc
+
+  apps/Blink/BlinkC.nc:
+    event void Timer0.fired()
+    {
+      call Leds.led0Toggle();
+    }
+    event void Timer1.fired()
+    {
+      call Leds.led1Toggle();
+    }
+    event void Timer2.fired()
+    {
+      call Leds.led2Toggle();
+    }
+  }
 
 Because it uses three instances of the Timer interface, ``BlinkC`` must
 implement three instances of ``Timer.fired()`` event. When implementing
@@ -386,17 +403,21 @@ procedure calls.
 
 Make a copy of the Blink application, and call it BlinkTask:
 
-| ``$ cd tinyos-2.x/apps``
-| ``$ cp -R Blink BlinkTask``
-| ``$ cd BlinkTask``
+.. code-block:: bash
+
+  $ cd tinyos-2.x/apps
+  $ cp -R Blink BlinkTask
+  $ cd BlinkTask
 
 Open ``BlinkC.nc``. Currently, the event handler for ``Timer0.fired()``
 is:
 
-| ``event void Timer0.fired() {``
-| ``  dbg("BlinkC", "Timer 0 fired @ %s\n", sim_time_string());``
-| ``  call Leds.led0Toggle();``
-| ``}``
+.. code-block:: nesc
+
+  event void Timer0.fired() {
+    dbg("BlinkC", "Timer 0 fired @ %s\n", sim_time_string());
+    call Leds.led0Toggle();
+  }
 
 Let's change it so that it does a bit of work, enough that we'll be able
 to see how long it runs. In terms of a mote, the rate at which we can
@@ -405,13 +426,15 @@ about 20 packets in that time. So this example is really exaggerated,
 but it's also simple enough that you can observe it with the naked eye.
 Change the handler to be this:
 
-| ``event void Timer0.fired() {``
-| ``  uint32_t i;``
-| ``  dbg("BlinkC", "Timer 0 fired @ %s\n", sim_time_string());``
-| ``  for (i = 0; i < 400001; i++) {``
-| ``    call Leds.led0Toggle();``
-| ``  }``
-| ``}``
+.. code-block:: nesc
+
+  event void Timer0.fired() {
+    uint32_t i;
+    dbg("BlinkC", "Timer 0 fired @ %s\n", sim_time_string());
+    for (i = 0; i < 400001; i++) {
+      call Leds.led0Toggle();
+    }
+  }
 
 This will cause the timer to toggle 400,001 times, rather than once.
 Because the number is odd, it will have the end result of a single
@@ -427,13 +450,17 @@ computation later. We can accomplish this with a **task**.
 
 A task is declared in your implementation module using the syntax
 
-``  task void taskname() { ... }``
+.. code-block:: nesc
+
+    task void taskname() { ... }
 
 where ``taskname()`` is whatever symbolic name you want to assign to the
 task. Tasks must return ``void`` and may not take any arguments. To
 dispatch a task for (later) execution, use the syntax
 
-``  post taskname();``
+.. code-block:: nesc
+
+    post taskname();
 
 A component can post a task in a command, an event, or a task. Because
 they are the root of a call graph, a tasks can safely both call commands
@@ -446,14 +473,16 @@ application is wired) and would lead to large stack usage.
 
 Modify BlinkC to perform the loop in a task:
 
-| ``task void computeTask() {``
-| ``  uint32_t i;``
-| ``  for (i = 0; i < 400001; i++) {}``
-| ``}``
-| ``event void Timer0.fired() {``
-| ``  call Leds.led0Toggle();``
-| ``  post computeTask();``
-| ``}``
+.. code-block:: nesc
+
+  task void computeTask() {
+    uint32_t i;
+    for (i = 0; i < 400001; i++) {}
+  }
+  event void Timer0.fired() {
+    call Leds.led0Toggle();
+    post computeTask();
+  }
 
 Telos platforms will still struggle, but mica platforms will operate OK.
 
@@ -467,21 +496,30 @@ long operations, you should dispatch a separate task for each operation,
 rather than using one big task. The ``post`` operation returns an
 ``error_t``, whose value is either ``SUCCESS`` or ``FAIL``. A post fails
 if and only if the task is already pending to run (it has been posted
-successfully and has not been invoked yet)  [1]_.
+successfully and has not been invoked yet)
+The task semantics have changed significantly from tinyos-2.x. In 1.x,
+a task could be posted more than once and a post could fail if the task
+queue were full. In 2.x, a basic post will only fail if that task has
+already been posted and has not started execution. So a task can always run,
+but can only have one outstanding post at any time.
+If a component needs to post task several times,
+then the end of the task logic can repost itself as need be.
 
 For example, try this:
 
-| ``uint32_t i;``
-| ``task void computeTask() {``
-| ``  uint32_t start = i;``
-| ``  for (;i < start + 10000 && i < 400001; i++) {}``
-| ``  if (i >= 400000) {``
-| ``    i = 0;``
-| ``  }``
-| ``  else {``
-| ``    post computeTask();``
-| ``  }``
-| ``}``
+.. code-block:: nesc
+
+  uint32_t i;
+  task void computeTask() {
+    uint32_t start = i;
+    for (;i < start + 10000 && i < 400001; i++) {}
+    if (i >= 400000) {
+      i = 0;
+    }
+    else {
+      post computeTask();
+    }
+  }
 
 This code breaks the compute task up into many smaller tasks. Each
 invocation of computeTask runs through 10,000 iterations of the loop. If
@@ -497,17 +535,19 @@ variable often does in C. However, as nesC component state is completely
 private, using the ``static`` keyword to limit naming scope is not as
 useful. This code, for example, is equivalent:
 
-| ``task void computeTask() {``
-| ``  static uint32_t i;``
-| ``  uint32_t start = i;``
-| ``  for (;i < start + 10000 && i < 400001; i++) {}``
-| ``  if (i >= 400000) {``
-| ``    i = 0;``
-| ``  }``
-| ``  else {``
-| ``    post computeTask();``
-| ``  }``
-| ``}``
+.. code-block:: nesc
+
+  task void computeTask() {
+    static uint32_t i;
+    uint32_t start = i;
+    for (;i < start + 10000 && i < 400001; i++) {}
+    if (i >= 400000) {
+      i = 0;
+    }
+    else {
+      post computeTask();
+    }
+  }
 
 .. _internal_functions:
 
@@ -522,37 +562,39 @@ therefore cannot invoke directly. While these functions do not have the
 ``command`` or ``event`` modifier, they can freely call commands or
 signal events. For example, this is perfectly reasonable nesC code:
 
-| ``module BlinkC {``
-| ``  uses interface Timer``\ \ `` as Timer0;``
-| ``  uses interface Timer``\ \ `` as Timer1;``
-| ``  uses interface Timer``\ \ `` as Timer2;``
-| ``  uses interface Leds;``
-| ``  uses interface Boot;``
-| ``}``
-| ``implementation``
-| ``{``
-| ``  void startTimers() {``
-| ``    call Timer0.startPeriodic( 250 );``
-| ``    call Timer1.startPeriodic( 500 );``
-| ``    call Timer2.startPeriodic( 1000 );``
-| ``  }``
-| ``  event void Boot.booted()``
-| ``  {``
-| ``    startTimers();``
-| ``  }``
-| ``  event void Timer0.fired()``
-| ``  {``
-| ``    call Leds.led0Toggle();``
-| ``  }``
-| ``  event void Timer1.fired()``
-| ``  {``
-| ``    call Leds.led1Toggle();``
-| ``  }``
-| ``  event void Timer2.fired()``
-| ``  {``
-| ``    call Leds.led2Toggle();``
-| ``  }``
-| ``}``
+.. code-block:: nesc
+
+  module BlinkC {
+    uses interface Timer<TMilli> as Timer0;
+    uses interface Timer<TMilli> as Timer1;
+    uses interface Timer<TMilli> as Timer2;
+    uses interface Leds;
+    uses interface Boot;
+  }
+  implementation
+  {
+    void startTimers() {
+      call Timer0.startPeriodic( 250 );
+      call Timer1.startPeriodic( 500 );
+      call Timer2.startPeriodic( 1000 );
+    }
+    event void Boot.booted()
+    {
+      startTimers();
+    }
+    event void Timer0.fired()
+    {
+      call Leds.led0Toggle();
+    }
+    event void Timer1.fired()
+    {
+      call Leds.led1Toggle();
+    }
+    event void Timer2.fired()
+    {
+      call Leds.led2Toggle();
+    }
+  }
 
 Internal functions act just like C functions: they don't need the
 ``call`` or ``signal`` keywords.
@@ -580,25 +622,28 @@ completes. This approach is called split-phase because it splits
 invocation and completion into two separate phases of execution. Here is
 a simple example of the difference between the two:
 
-.. raw:: html
 
-   <center>
+**Blocking**
 
-============================== ==================================
-Blocking                       Split-Phase
-| ``if (send() == SUCCESS) {`` | ``// start phase``
-| ``  sendCount++;``           | ``send();``
-| ``}``                        | ``//completion phase``
-                               | ``void sendDone(error_t err) {``
-                               | ``  if (err == SUCCESS) {``
-                               | ``    sendCount++;``
-                               | ``  }``
-                               | ``}``
-============================== ==================================
+.. code-block:: nesc
 
-.. raw:: html
+  if (send() == SUCCESS) {
+    sendCount++;
+  }
 
-   </center>
+**Split-Phase**
+
+.. code-block:: nesc
+
+  // start phase
+  send();
+  //completion phase
+  void sendDone(error_t err) {
+    if (err == SUCCESS) {
+      sendCount++;
+    }
+  }
+
 
 Split-phase code is often a bit more verbose and complex than sequential
 code. But it has several advantages. First, split-phase calls do not tie
@@ -624,24 +669,27 @@ immediately. Some time later (specified by the argument), the component
 providing Timer signals ``Timer.fired``. In a system with blocking
 calls, a program might use ``sleep()``:
 
-.. raw:: html
+**Blocking**
 
-   <center>
+.. code-block:: nesc
 
-====================== ===================================
-Blocking               Split-phase
-| ``state = WAITING;`` | ``state = WAITING;``
-| ``op1();``           | ``op1();``
-| ``sleep(500);``      | ``call Timer.startOneShot(500);``
-| ``op2();``           | ``event void Timer.fired() {``
-| ``state = RUNNING``  | ``  op2();``
-                       | ``  state = RUNNING;``
-                       | ``}``
-====================== ===================================
+  state = WAITING;
+  op1();
+  sleep(500);
+  op2();
+  state = RUNNING
 
-.. raw:: html
+**Split-phase**
 
-   </center>
+.. code-block:: nesc
+
+  state = WAITING;
+  op1();
+  call Timer.startOneShot(500);
+  event void Timer.fired() {
+    op2();
+    state = RUNNING;
+  }
 
 In the next lesson, we'll look at one of the most basic split-phase
 operations: sending packets.
@@ -651,36 +699,5 @@ operations: sending packets.
 Related Documentation
 =====================
 
--  `TEP 102:
-   Timers <http://www.tinyos.net/tinyos-2.x/doc/html/tep102.html>`__
--  `TEP 106: Schedulers and
-   Tasks <http://www.tinyos.net/tinyos-2.x/doc/html/tep106.html>`__
-
---------------
-
-.. raw:: html
-
-   <references/>
-
---------------
-
-.. raw:: html
-
-   <center>
-
-< `Previous Lesson <Getting_Started_with_TinyOS>`__ \|
-`Top <Modules_and_the_TinyOS_Execution_Model#Modules_and_State>`__ \|
-`Next Lesson <Mote-mote_radio_communication>`__ >
-
-.. raw:: html
-
-   </center>
-
-.. [1]
-   The task semantics have changed significantly from tinyos-2.x. In
-   1.x, a task could be posted more than once and a post could fail if
-   the task queue were full. In 2.x, a basic post will only fail if that
-   task has already been posted and has not started execution. So a task
-   can always run, but can only have one outstanding post at any time.
-   If a component needs to post task several times, then the end of the
-   task logic can repost itself as need be.
+-  :doc:`TEP 102: Timers <../../teps/txt/tep102>`
+-  :doc:`TEP 106: Schedulers and Tasks <../../teps/txt/tep106>`
