@@ -448,32 +448,28 @@ Let's walk through the steps, one-by-one:
    manner.
 #. **Update the ``module`` block in the ``BlinkToRadioC.nc`` by adding
    ``uses`` statements for the interfaces we need:**
+  .. code-block:: nesc
 
-.. code-block:: nesc
-
-  module BlinkToRadioC {
-
-    ...
-    uses interface Packet;
-    uses interface AMPacket;
-    uses interface AMSend;
-    uses interface SplitControl as AMControl;
-  }
-
-Note that ``SplitControl`` has been renamed to ``AMControl`` using the
-``as`` keyword. nesC allows interfaces to be renamed in this way for
-several reasons. First, it often happens that two or more components
-that are needed in the same module provide the same interface. The
-``as`` keyword allows one or more such names to be changed to distinct
-names so that they can each be addressed individually. Second,
-interfaces are sometimes renamed to something more meaningful. In our
-case, ``SplitControl`` is a general interface used for starting and
-stopping components, but the name ``AMControl`` is a mnemonic to remind
-us that the particular instance of ``SplitControl`` is used to control
-the ``ActiveMessageC`` component.
-
-| **Declare any new variables and add any needed initialization code.**
-| First, we need to declare some new module-scope variables. We need a
+    module BlinkToRadioC {
+      ...
+      uses interface Packet;
+      uses interface AMPacket;
+      uses interface AMSend;
+      uses interface SplitControl as AMControl;
+    }
+  Note that ``SplitControl`` has been renamed to ``AMControl`` using the
+  ``as`` keyword. nesC allows interfaces to be renamed in this way for
+  several reasons. First, it often happens that two or more components
+  that are needed in the same module provide the same interface. The
+  ``as`` keyword allows one or more such names to be changed to distinct
+  names so that they can each be addressed individually. Second,
+  interfaces are sometimes renamed to something more meaningful. In our
+  case, ``SplitControl`` is a general interface used for starting and
+  stopping components, but the name ``AMControl`` is a mnemonic to remind
+  us that the particular instance of ``SplitControl`` is used to control
+  the ``ActiveMessageC`` component.
+#. **Declare any new variables and add any needed initialization code.**
+  First, we need to declare some new module-scope variables. We need a
   ``message_t`` to hold our data for transmission. We also need a flag
   to keep track of when the radio is busy sending. These declarations
   need to be added in the ``implementation`` block of
