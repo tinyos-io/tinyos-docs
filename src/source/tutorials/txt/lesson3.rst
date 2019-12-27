@@ -448,7 +448,8 @@ Let's walk through the steps, one-by-one:
    manner.
 #. **Update the ``module`` block in the ``BlinkToRadioC.nc`` by adding
    ``uses`` statements for the interfaces we need:**
-  .. code-block:: nesc
+   
+   .. code-block:: nesc
 
     module BlinkToRadioC {
       ...
@@ -457,111 +458,112 @@ Let's walk through the steps, one-by-one:
       uses interface AMSend;
       uses interface SplitControl as AMControl;
     }
-  Note that ``SplitControl`` has been renamed to ``AMControl`` using the
-  ``as`` keyword. nesC allows interfaces to be renamed in this way for
-  several reasons. First, it often happens that two or more components
-  that are needed in the same module provide the same interface. The
-  ``as`` keyword allows one or more such names to be changed to distinct
-  names so that they can each be addressed individually. Second,
-  interfaces are sometimes renamed to something more meaningful. In our
-  case, ``SplitControl`` is a general interface used for starting and
-  stopping components, but the name ``AMControl`` is a mnemonic to remind
-  us that the particular instance of ``SplitControl`` is used to control
-  the ``ActiveMessageC`` component.
+  
+   Note that ``SplitControl`` has been renamed to ``AMControl`` using the
+   ``as`` keyword. nesC allows interfaces to be renamed in this way for
+   several reasons. First, it often happens that two or more components
+   that are needed in the same module provide the same interface. The
+   ``as`` keyword allows one or more such names to be changed to distinct
+   names so that they can each be addressed individually. Second,
+   interfaces are sometimes renamed to something more meaningful. In our
+   case, ``SplitControl`` is a general interface used for starting and
+   stopping components, but the name ``AMControl`` is a mnemonic to remind
+   us that the particular instance of ``SplitControl`` is used to control
+   the ``ActiveMessageC`` component.
 #. **Declare any new variables and add any needed initialization code.**
-  First, we need to declare some new module-scope variables. We need a
-  ``message_t`` to hold our data for transmission. We also need a flag
-  to keep track of when the radio is busy sending. These declarations
-  need to be added in the ``implementation`` block of
-  ``BlinkToRadioC.nc``:
+   First, we need to declare some new module-scope variables. We need a
+   ``message_t`` to hold our data for transmission. We also need a flag
+   to keep track of when the radio is busy sending. These declarations
+   need to be added in the ``implementation`` block of
+   ``BlinkToRadioC.nc``:
 
-| ``implementation {``
-| ``  bool busy = FALSE;``
-| ``  message_t pkt;``
-| ``  ...``
-| ``}``
+   .. code-block:: nesc
 
-Next, we need to handle the initialization of the radio. The radio needs
-to be started when the system is booted so we must call
-``AMControl.start`` inside ``Boot.booted``. The only complication is
-that in our current implementation, we start a timer inside
-``Boot.booted`` and we are planning to use this timer to send messages
-over the radio but the radio can't be used until it has completed
-starting up. The radio signals that it has completed starting through
-the ``AMControl.startDone`` event. To ensure that we do not start using
-the radio before it is ready, we need to postpone starting the timer
-until after the radio has completed starting. We can accomplish this by
-moving the call to start the timer, which is now inside ``Boot.booted``,
-to ``AMControl.startDone``, giving us a new ``Boot.booted`` with the
-following body:
+    implementation {
+      bool busy = FALSE;
+      message_t pkt;
+      ...
+    }
 
-| ``  event void Boot.booted() {``
-| ``    call AMControl.start();``
-| ``  }``
+   Next, we need to handle the initialization of the radio. The radio needs
+   to be started when the system is booted so we must call
+   ``AMControl.start`` inside ``Boot.booted``. The only complication is
+   that in our current implementation, we start a timer inside
+   ``Boot.booted`` and we are planning to use this timer to send messages
+   over the radio but the radio can't be used until it has completed
+   starting up. The radio signals that it has completed starting through
+   the ``AMControl.startDone`` event. To ensure that we do not start using
+   the radio before it is ready, we need to postpone starting the timer
+   until after the radio has completed starting. We can accomplish this by
+   moving the call to start the timer, which is now inside ``Boot.booted``,
+   to ``AMControl.startDone``, giving us a new ``Boot.booted`` with the
+   following body:
 
-We also need to implement the ``AMControl.startDone`` and
-``AMControl.stopDone`` event handlers, which have the following bodies:
+   .. code-block:: nesc
 
-| ``  event void AMControl.startDone(error_t err) {``
-| ``    if (err == SUCCESS) {``
-| ``      call Timer0.startPeriodic(TIMER_PERIOD_MILLI);``
-| ``    }``
-| ``    else {``
-| ``      call AMControl.start();``
-| ``    }``
-| ``  }``
-| ``  event void AMControl.stopDone(error_t err) {``
-| ``  }``
+    event void Boot.booted() {
+     call AMControl.start();
+    }
 
-If the radio is started successfully, ``AMControl.startDone`` will be
-called with the ``error_t`` parameter set to a value of ``SUCCESS``. If
-the radio starts successfully, then it is appropriate to start the
-timer. If, however, the radio does not start successfully, then it
-obviously cannot be used so we try again to start it. This process
-continues until the radio starts, and ensures that the node software
-doesn't run until the key components have started successfully. If the
-radio doesn't start at all, a human operator might notice that the LEDs
-are not blinking as they are supposed to, and might try to debug the
-problem.
+   We also need to implement the ``AMControl.startDone`` and
+   ``AMControl.stopDone`` event handlers, which have the following bodies:
 
-.. raw:: html
+   .. code-block:: nesc
 
-   <li>
+    event void AMControl.startDone(error_t err) {
+     if (err == SUCCESS) {
+      call Timer0.startPeriodic(TIMER_PERIOD_MILLI);
+     }
+     else {
+      call AMControl.start();
+     }
+    }
+    event void AMControl.stopDone(error_t err) {
+    }
 
-| **Add any program logic and calls to the used interfaces we need for
-  our application.**
-| Since we want to transmit the node's id and counter value every time
-  the timer fires, we need to add some code to the ``Timer0.fired``
-  event handler:
+   If the radio is started successfully, ``AMControl.startDone`` will be
+   called with the ``error_t`` parameter set to a value of ``SUCCESS``. If
+   the radio starts successfully, then it is appropriate to start the
+   timer. If, however, the radio does not start successfully, then it
+   obviously cannot be used so we try again to start it. This process
+   continues until the radio starts, and ensures that the node software
+   doesn't run until the key components have started successfully. If the
+   radio doesn't start at all, a human operator might notice that the LEDs
+   are not blinking as they are supposed to, and might try to debug the
+   problem.
 
-.. raw:: html
 
-   </li>
+#. **Add any program logic and calls to the used interfaces we need for our application.**
+   Since we want to transmit the node's id and counter value every time
+   the timer fires, we need to add some code to the ``Timer0.fired``
+   event handler:
 
-| ``event void Timer0.fired() {``
-| ``  ...``
-| ``  if (!busy) {``
-| ``    BlinkToRadioMsg* btrpkt = (BlinkToRadioMsg*)(call Packet.getPayload(&pkt, sizeof (BlinkToRadioMsg)));``
-| ``    btrpkt->nodeid = TOS_NODE_ID;``
-| ``    btrpkt->counter = counter;``
-| ``    if (call AMSend.send(AM_BROADCAST_ADDR, &pkt, sizeof(BlinkToRadioMsg)) == SUCCESS) {``
-| ``      busy = TRUE;``
-| ``    }``
-| ``  }``
-| ``}``
+   .. code-block:: nesc
 
-This code performs several operations. First, it ensures that a message
-transmission is not in progress by checking the busy flag. Then it gets
-the packet's payload portion and casts it to a pointer to the previously
-declared ``BlinkToRadioMsg`` external type. It can now use this pointer
-to initialise the packet's fields, and then send the packet by calling
-``AMSend.send``. The packet is sent to all nodes in radio range by
-specyfing ``AM_BROADCAST_ADDR`` as the destination address. Finally, the
-test against SUCCESS verifies that the AM layer accepted the message for
-transmission. If so, the busy flag is set to true. For the duration of
-the send attempt, the packet is owned by the radio, and user code must
-not access it. Note that we could have avoided using the ``Packet``
-interface, as it's ``getPayload`` command is repeated within ``AMSend``.
+    event void Timer0.fired() {
+      ...
+      if (!busy) {
+        BlinkToRadioMsg* btrpkt = (BlinkToRadioMsg*)(call Packet.getPayload(&pkt, sizeof (BlinkToRadioMsg)));
+        btrpkt->nodeid = TOS_NODE_ID;
+        btrpkt->counter = counter;
+        if (call AMSend.send(AM_BROADCAST_ADDR, &pkt, sizeof(BlinkToRadioMsg)) == SUCCESS) {
+          busy = TRUE;
+        }
+      }
+    }
+
+   This code performs several operations. First, it ensures that a message
+   transmission is not in progress by checking the busy flag. Then it gets
+   the packet's payload portion and casts it to a pointer to the previously
+   declared ``BlinkToRadioMsg`` external type. It can now use this pointer
+   to initialise the packet's fields, and then send the packet by calling
+   ``AMSend.send``. The packet is sent to all nodes in radio range by
+   specyfing ``AM_BROADCAST_ADDR`` as the destination address. Finally, the
+   test against SUCCESS verifies that the AM layer accepted the message for
+   transmission. If so, the busy flag is set to true. For the duration of
+   the send attempt, the packet is owned by the radio, and user code must
+   not access it. Note that we could have avoided using the ``Packet``
+   interface, as it's ``getPayload`` command is repeated within ``AMSend``.
 
 .. raw:: html
 
@@ -577,18 +579,18 @@ interface, as it's ``getPayload`` command is repeated within ``AMSend``.
 
    </li>
 
-| ``  /**``
-| ``   * Signaled in response to an accepted send request. msg is``
-| ``   * the message buffer sent, and error indicates whether``
-| ``   * the send was successful.``
-| ``   *``
-| ``   * @param  msg   the packet which was submitted as a send request``
-| ``   * @param  error SUCCESS if it was sent successfully, FAIL if it was not,``
-| ``   *               ECANCEL if it was cancelled``
-| ``   * @see send``
-| ``   * @see cancel``
-| ``   */``
-| ``  event void sendDone(message_t* msg, error_t error);``
+     /**``
+      * Signaled in response to an accepted send request. msg is``
+      * the message buffer sent, and error indicates whether``
+      * the send was successful.``
+      *``
+      * @param  msg   the packet which was submitted as a send request``
+      * @param  error SUCCESS if it was sent successfully, FAIL if it was not,``
+      *               ECANCEL if it was cancelled``
+      * @see send``
+      * @see cancel``
+      */``
+     event void sendDone(message_t* msg, error_t error);``
 
 This event is signaled after a message transmission attempt. In addition
 to signaling whether the message was transmitted successfully or not,
@@ -597,11 +599,11 @@ component that originally called the ``AMSend.send`` command. Therefore
 ``sendDone`` handler needs to clear the ``busy`` flag to indicate that
 the message buffer can be reused:
 
-| ``  event void AMSend.sendDone(message_t* msg, error_t error) {``
-| ``    if (&pkt == msg) {``
-| ``      busy = FALSE;``
-| ``    }``
-| ``  }``
+     event void AMSend.sendDone(message_t* msg, error_t error) {``
+       if (&pkt == msg) {``
+         busy = FALSE;``
+       }``
+     }``
 
 Note the check to ensure the message buffer that was signaled is the
 same as the local message buffer. This test is needed because if two
@@ -627,12 +629,12 @@ required.
 
    </li>
 
-| ``implementation {``
-| ``  ...``
-| ``  components ActiveMessageC;``
-| ``  components new AMSenderC(AM_BLINKTORADIO);``
-| ``  ...``
-| ``}``
+   implementation {``
+     ...``
+     components ActiveMessageC;``
+     components new AMSenderC(AM_BLINKTORADIO);``
+     ...``
+   }``
 
 These statements indicate that two components, ``ActiveMessageC`` and
 ``AMSenderC``, will provide the needed interfaces. However, note the
@@ -644,12 +646,12 @@ indicates that a new instance of ``AMSenderC`` will be created. The
 ``AMSenderC``. We can extend the ``enum`` in the ``BlinkToRadio.h``
 header file to incorporate the value of ``AM_BLINKTORADIO``:
 
-| ``...``
-| ``enum {``
-| ``  AM_BLINKTORADIO = 6,``
-| ``  TIMER_PERIOD_MILLI = 250``
-| ``};``
-| ``...``
+   ...``
+   enum {``
+     AM_BLINKTORADIO = 6,``
+     TIMER_PERIOD_MILLI = 250``
+   };``
+   ...``
 
 .. raw:: html
 
@@ -665,13 +667,13 @@ header file to incorporate the value of ``AM_BLINKTORADIO``:
 
    </li>
 
-| ``implementation {``
-| ``  ...``
-| ``  App.Packet -> AMSenderC;``
-| ``  App.AMPacket -> AMSenderC;``
-| ``  App.AMSend -> AMSenderC;``
-| ``  App.AMControl -> ActiveMessageC;``
-| ``}``
+   implementation {``
+     ...``
+     App.Packet -> AMSenderC;``
+     App.AMPacket -> AMSenderC;``
+     App.AMSend -> AMSenderC;``
+     App.AMControl -> ActiveMessageC;``
+   }``
 
 .. raw:: html
 
@@ -708,9 +710,9 @@ reverse channel was no longer available.
 
 module BlinkToRadioC {
 
-| ``  ...``
-| ``  uses interface Receive;``
-| ``}``
+     ...``
+     uses interface Receive;``
+   }``
 
 .. raw:: html
 
@@ -741,13 +743,13 @@ module BlinkToRadioC {
 
    </li>
 
-| ``event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len) {``
-| ``  if (len == sizeof(BlinkToRadioMsg)) {``
-| ``    BlinkToRadioMsg* btrpkt = (BlinkToRadioMsg*)payload;``
-| ``    call Leds.set(btrpkt->counter);``
-| ``  }``
-| ``  return msg;``
-| ``}``
+   event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len) {``
+     if (len == sizeof(BlinkToRadioMsg)) {``
+       BlinkToRadioMsg* btrpkt = (BlinkToRadioMsg*)payload;``
+       call Leds.set(btrpkt->counter);``
+     }``
+     return msg;``
+   }``
 
 The ``receive`` event handler performs some simple operations. First, we
 need to ensure that the length of the message is what is expected. Then,
@@ -778,11 +780,11 @@ no critical sections are needed when accessing it.
 
    </li>
 
-| ``implementation {``
-| ``  ...``
-| ``  components new AMReceiverC(AM_BLINKTORADIO);``
-| ``  ...``
-| ``}``
+   implementation {``
+     ...``
+     components new AMReceiverC(AM_BLINKTORADIO);``
+     ...``
+   }``
 
 This statement means that a new instance of ``AMReceiverC`` will be
 created. ``AMReceiver`` is a generic, parameterized component. The
@@ -806,10 +808,10 @@ defined in the ``BlinkToRadio.h`` header file.
 
    </li>
 
-| ``implementation {``
-| ``  ...``
-| ``  App.Receive -> AMReceiverC;``
-| ``}``
+   implementation {``
+     ...``
+     App.Receive -> AMReceiverC;``
+   }``
 
 .. raw:: html
 
@@ -830,71 +832,71 @@ defined in the ``BlinkToRadio.h`` header file.
 
    </li>
 
-| ``$ motelist``
-| ``Reference  CommPort   Description``
-| ``---------- ---------- ----------------------------------------``
-| ``UCC89MXV   COM17      Telos (Rev B 2004-09-27)``
+   $ motelist``
+   Reference  CommPort   Description``
+   ---------- ---------- ----------------------------------------``
+   UCC89MXV   COM17      Telos (Rev B 2004-09-27)``
 
 Now, assuming you are in the ``apps/tutorials/BlinkToRadio`` directory,
 type ``make telosb install,1``. You should see a lot text scroll by that
 looks something like:
 
-| ``$ make telosb install,1``
-| ``mkdir -p build/telosb``
-| ``    compiling BlinkToRadioAppC to a telosb binary``
-| ``ncc -o build/telosb/main.exe -Os -O -mdisable-hwmul -Wall -Wshadow -DDEF_TOS_AM_GROUP=0x7d ``
-| ``-Wnesc-all -target=telosb -fnesc-cfile=build/telosb/app.c -board=   BlinkToRadioAppC.nc -lm``
-| ``    compiled BlinkToRadioAppC to build/telosb/main.exe``
-| ``            9040 bytes in ROM``
-| ``             246 bytes in RAM``
-| ``msp430-objcopy --output-target=ihex build/telosb/main.exe build/telosb/main.ihex``
-| ``    writing TOS image``
-| ``tos-set-symbols --objcopy msp430-objcopy --objdump msp430-objdump --target ihex build/telosb/main.ihex ``
-| ``build/telosb/main.ihex.out-1 TOS_NODE_ID=1 ActiveMessageAddressC$addr=1``
-| ``    found mote on COM17 (using bsl,auto)``
-| ``    installing telosb binary using bsl``
-| ``tos-bsl --telosb -c 16 -r -e -I -p build/telosb/main.ihex.out-1``
-| ``MSP430 Bootstrap Loader Version: 1.39-telos-8``
-| ``Mass Erase...``
-| ``Transmit default password ...``
-| ``Invoking BSL...``
-| ``Transmit default password ...``
-| ``Current bootstrap loader version: 1.61 (Device ID: f16c)``
-| ``Changing baudrate to 38400 ...``
-| ``Program ...``
-| ``9072 bytes programmed.``
-| ``Reset device ...``
-| ``rm -f build/telosb/main.exe.out-1 build/telosb/main.ihex.out-1``
+   $ make telosb install,1``
+   mkdir -p build/telosb``
+       compiling BlinkToRadioAppC to a telosb binary``
+   ncc -o build/telosb/main.exe -Os -O -mdisable-hwmul -Wall -Wshadow -DDEF_TOS_AM_GROUP=0x7d ``
+   -Wnesc-all -target=telosb -fnesc-cfile=build/telosb/app.c -board=   BlinkToRadioAppC.nc -lm``
+       compiled BlinkToRadioAppC to build/telosb/main.exe``
+               9040 bytes in ROM``
+                246 bytes in RAM``
+   msp430-objcopy --output-target=ihex build/telosb/main.exe build/telosb/main.ihex``
+       writing TOS image``
+   tos-set-symbols --objcopy msp430-objcopy --objdump msp430-objdump --target ihex build/telosb/main.ihex ``
+   build/telosb/main.ihex.out-1 TOS_NODE_ID=1 ActiveMessageAddressC$addr=1``
+       found mote on COM17 (using bsl,auto)``
+       installing telosb binary using bsl``
+   tos-bsl --telosb -c 16 -r -e -I -p build/telosb/main.ihex.out-1``
+   MSP430 Bootstrap Loader Version: 1.39-telos-8``
+   Mass Erase...``
+   Transmit default password ...``
+   Invoking BSL...``
+   Transmit default password ...``
+   Current bootstrap loader version: 1.61 (Device ID: f16c)``
+   Changing baudrate to 38400 ...``
+   Program ...``
+   9072 bytes programmed.``
+   Reset device ...``
+   rm -f build/telosb/main.exe.out-1 build/telosb/main.ihex.out-1``
 
 Now, remove the first telosb from the USB port, insert the batteries,
 and set it aside. Insert the second telos into the USB port and once
 again type ``motelist``. You should again see something like:
 
-| ``$ motelist``
-| ``Reference  CommPort   Description``
-| ``---------- ---------- ----------------------------------------``
-| ``UC9VN03I   COM14      Telos (Rev B 2004-09-27)``
+   $ motelist``
+   Reference  CommPort   Description``
+   ---------- ---------- ----------------------------------------``
+   UC9VN03I   COM14      Telos (Rev B 2004-09-27)``
 
 Finally, type ``make telosb reinstall,2`` and you should once again see
 something like the following scroll by:
 
-| ``$ make telosb reinstall,2``
-| ``tos-set-symbols --objcopy msp430-objcopy --objdump msp430-objdump --target ihex build/telosb/main.ihex ``
-| ``build/telosb/main.ihex.out-2 TOS_NODE_ID=2 ActiveMessageAddressC$addr=2``
-| ``    found mote on COM14 (using bsl,auto)``
-| ``    installing telosb binary using bsl``
-| ``tos-bsl --telosb -c 13 -r -e -I -p build/telosb/main.ihex.out-2``
-| ``MSP430 Bootstrap Loader Version: 1.39-telos-8``
-| ``Mass Erase...``
-| ``Transmit default password ...``
-| ``Invoking BSL...``
-| ``Transmit default password ...``
-| ``Current bootstrap loader version: 1.61 (Device ID: f16c)``
-| ``Changing baudrate to 38400 ...``
-| ``Program ...``
-| ``9072 bytes programmed.``
-| ``Reset device ...``
-| ``rm -f build/telosb/main.exe.out-2 build/telosb/main.ihex.out-2``
+   $ make telosb reinstall,2``
+   tos-set-symbols --objcopy msp430-objcopy --objdump msp430-objdump --target ihex build/telosb/main.ihex ``
+   build/telosb/main.ihex.out-2 TOS_NODE_ID=2 ActiveMessageAddressC$addr=2``
+       found mote on COM14 (using bsl,auto)``
+       installing telosb binary using bsl``
+   tos-bsl --telosb -c 13 -r -e -I -p build/telosb/main.ihex.out-2``
+   MSP430 Bootstrap Loader Version: 1.39-telos-8``
+   Mass Erase...``
+   Transmit default password ...``
+   Invoking BSL...``
+   Transmit default password ...``
+   Current bootstrap loader version: 1.61 (Device ID: f16c)``
+   Changing baudrate to 38400 ...``
+   Program ...``
+   9072 bytes programmed.``
+   Reset device ...``
+   rm -f build/telosb/main.exe.out-2 build/telosb/main.ihex.out-2``
 
 **At this point, both motes should be blinking their LEDs.** If you
 press the RESET button on either telosb, then the LEDs on the *other*
