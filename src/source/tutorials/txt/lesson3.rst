@@ -219,7 +219,7 @@ this code:
 
    #include <Timer.h>
    #include "BlinkToRadio.h"
-  
+   
    module BlinkToRadioC {
      uses interface Boot;
      uses interface Leds;
@@ -565,119 +565,103 @@ Let's walk through the steps, one-by-one:
    not access it. Note that we could have avoided using the ``Packet``
    interface, as it's ``getPayload`` command is repeated within ``AMSend``.
 
-.. raw:: html
+#. **Implement any (non-initialization) events specified in the
+   interfaces we plan on using.**
+   Looking through the ``Packet``, ``AMPacket``, and ``AMSend``
+   interfaces, we see that there is only one ``event`` we need to worry
+   about, ``AMSend.sendDone``:
+   
+   .. code-block:: nesc
+     
+     /**
+      * Signaled in response to an accepted send request. msg is
+      * the message buffer sent, and error indicates whether
+      * the send was successful.
+      *
+      * @param  msg   the packet which was submitted as a send request
+      * @param  error SUCCESS if it was sent successfully, FAIL if it was not,
+      *               ECANCEL if it was cancelled
+      * @see send
+      * @see cancel
+      */
+     event void sendDone(message_t* msg, error_t error);
 
-   <li>
 
-| **Implement any (non-initialization) events specified in the
-  interfaces we plan on using.**
-| Looking through the ``Packet``, ``AMPacket``, and ``AMSend``
-  interfaces, we see that there is only one ``event`` we need to worry
-  about, ``AMSend.sendDone``:
+   This event is signaled after a message transmission attempt. In addition
+   to signaling whether the message was transmitted successfully or not,
+   the event also returns ownership of ``msg`` from ``AMSend`` back to the
+   component that originally called the ``AMSend.send`` command. Therefore
+   ``sendDone`` handler needs to clear the ``busy`` flag to indicate that
+   the message buffer can be reused:
 
-.. raw:: html
+   .. code-block:: nesc
 
-   </li>
+    event void AMSend.sendDone(message_t* msg, error_t error) {
+       if (&pkt == msg) {
+         busy = FALSE;
+       }
+    }
+   
+   Note the check to ensure the message buffer that was signaled is the
+   same as the local message buffer. This test is needed because if two
+   components wire to the same ``AMSend``, *both* will receive a
+   ``sendDone`` event after *either* component issues a ``send`` command.
+   Since a component writer has no way to enforce that her component will
+   not be used in this manner, a defensive style of programming that
+   verifies that the sent message is the same one that is being signaled is
+   required.
 
-     /**``
-      * Signaled in response to an accepted send request. msg is``
-      * the message buffer sent, and error indicates whether``
-      * the send was successful.``
-      *``
-      * @param  msg   the packet which was submitted as a send request``
-      * @param  error SUCCESS if it was sent successfully, FAIL if it was not,``
-      *               ECANCEL if it was cancelled``
-      * @see send``
-      * @see cancel``
-      */``
-     event void sendDone(message_t* msg, error_t error);``
+#. **Update the ``implementation`` block of the application configuration
+   file by adding a ``components`` statement for each component used that
+   provides one of the interfaces chosen earlier.**
+   The following lines can be added just below the existing
+   ``components`` declarations in the ``implementation`` block of
+   ``BlinkToRadioAppC.nc``:
 
-This event is signaled after a message transmission attempt. In addition
-to signaling whether the message was transmitted successfully or not,
-the event also returns ownership of ``msg`` from ``AMSend`` back to the
-component that originally called the ``AMSend.send`` command. Therefore
-``sendDone`` handler needs to clear the ``busy`` flag to indicate that
-the message buffer can be reused:
+   .. code-block:: nesc
 
-     event void AMSend.sendDone(message_t* msg, error_t error) {``
-       if (&pkt == msg) {``
-         busy = FALSE;``
-       }``
-     }``
+    implementation {
+      ...
+      components ActiveMessageC;
+      components new AMSenderC(AM_BLINKTORADIO);
+      ...
+    }
 
-Note the check to ensure the message buffer that was signaled is the
-same as the local message buffer. This test is needed because if two
-components wire to the same ``AMSend``, *both* will receive a
-``sendDone`` event after *either* component issues a ``send`` command.
-Since a component writer has no way to enforce that her component will
-not be used in this manner, a defensive style of programming that
-verifies that the sent message is the same one that is being signaled is
-required.
+   These statements indicate that two components, ``ActiveMessageC`` and
+   ``AMSenderC``, will provide the needed interfaces. However, note the
+   slight difference in their syntax. ``ActiveMessageC`` is a singleton
+   component that is defined once for each type of hardware platform.
+   ``AMSenderC`` is a generic, parameterized component. The ``new`` keyword
+   indicates that a new instance of ``AMSenderC`` will be created. The
+   ``AM_BLINKTORADIO`` parameter indicates the AM type of the
+   ``AMSenderC``. We can extend the ``enum`` in the ``BlinkToRadio.h``
+   header file to incorporate the value of ``AM_BLINKTORADIO``:
 
-.. raw:: html
+   .. code-block:: nesc
 
-   <li>
+    ...
+    enum {
+     AM_BLINKTORADIO = 6,
+     TIMER_PERIOD_MILLI = 250
+    };
+    ...
 
-| **Update the ``implementation`` block of the application configuration
-  file by adding a ``components`` statement for each component used that
-  provides one of the interfaces chosen earlier.**
-| The following lines can be added just below the existing
-  ``components`` declarations in the ``implementation`` block of
-  ``BlinkToRadioAppC.nc``:
 
-.. raw:: html
+#. **Wire the the interfaces used by the application to the components
+   which provide those interfaces.**
+   The following lines will wire the used interfaces to the providing
+   components. These lines should be added to the bottom of the
+   ``implementation`` block of ``BlinkToRadioAppC.nc``:
 
-   </li>
+   .. code-block:: nesc
 
-   implementation {``
-     ...``
-     components ActiveMessageC;``
-     components new AMSenderC(AM_BLINKTORADIO);``
-     ...``
-   }``
-
-These statements indicate that two components, ``ActiveMessageC`` and
-``AMSenderC``, will provide the needed interfaces. However, note the
-slight difference in their syntax. ``ActiveMessageC`` is a singleton
-component that is defined once for each type of hardware platform.
-``AMSenderC`` is a generic, parameterized component. The ``new`` keyword
-indicates that a new instance of ``AMSenderC`` will be created. The
-``AM_BLINKTORADIO`` parameter indicates the AM type of the
-``AMSenderC``. We can extend the ``enum`` in the ``BlinkToRadio.h``
-header file to incorporate the value of ``AM_BLINKTORADIO``:
-
-   ...``
-   enum {``
-     AM_BLINKTORADIO = 6,``
-     TIMER_PERIOD_MILLI = 250``
-   };``
-   ...``
-
-.. raw:: html
-
-   <li>
-
-| **Wire the the interfaces used by the application to the components
-  which provide those interfaces.**
-| The following lines will wire the used interfaces to the providing
-  components. These lines should be added to the bottom of the
-  ``implementation`` block of ``BlinkToRadioAppC.nc``:
-
-.. raw:: html
-
-   </li>
-
-   implementation {``
-     ...``
-     App.Packet -> AMSenderC;``
-     App.AMPacket -> AMSenderC;``
-     App.AMSend -> AMSenderC;``
-     App.AMControl -> ActiveMessageC;``
-   }``
-
-.. raw:: html
-
-   </ol>
+    implementation {
+     ...
+     App.Packet -> AMSenderC;
+     App.AMPacket -> AMSenderC;
+     App.AMSend -> AMSenderC;
+     App.AMControl -> ActiveMessageC;
+    }
 
 .. _receiving_a_message_over_the_radio:
 
@@ -689,7 +673,7 @@ add some code to receive and process the messages. Let's write code
 that, upon receiving a message, sets the LEDs to the three least
 significant bits of the counter in the message. To make this application
 interesting, we will want to remove the line
-[STRIKEOUT:``call``\ ````\ ``Leds.set(counter);``] from the
+``call Leds.set(counter);`` from the
 ``Timer0.fired`` event handler. Otherwise, both the timer events and
 packet receptions will update the LEDs and the resulting effect will be
 bizarre.
@@ -708,48 +692,35 @@ reverse channel was no longer available.
 #. **Update the module block in the BlinkToRadioC.nc by adding uses
    statements for the interfaces we need:**
 
-module BlinkToRadioC {
+   .. code-block:: nesc
 
-     ...``
-     uses interface Receive;``
-   }``
+    module BlinkToRadioC {
+     ...
+     uses interface Receive;
+    }
 
-.. raw:: html
+#. **Declare any new variables and add any needed initialization code.**
+   We will not require any new variables to receive and process messages
+   from the radio.
 
-   <li>
+#. **Add any program logic and calls to the used interfaces we need for
+   our application.**
+   Message reception is an event-driven process so we do not need to call
+   any commands on the ``Receive``.
 
-| **Declare any new variables and add any needed initialization code.**
-| We will not require any new variables to receive and process messages
-  from the radio.
+#. **Implemement any (non-initialization) events specified in the
+   interfaces we plan on using.**
+   We need to implement the ``Receive.receive`` event handler:
 
-.. raw:: html
+   .. code-block:: nesc
 
-   <li>
-
-| **Add any program logic and calls to the used interfaces we need for
-  our application.**
-| Message reception is an event-driven process so we do not need to call
-  any commands on the ``Receive``.
-
-.. raw:: html
-
-   <li>
-
-| **Implemement any (non-initialization) events specified in the
-  interfaces we plan on using.**
-| We need to implement the ``Receive.receive`` event handler:
-
-.. raw:: html
-
-   </li>
-
-   event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len) {``
-     if (len == sizeof(BlinkToRadioMsg)) {``
-       BlinkToRadioMsg* btrpkt = (BlinkToRadioMsg*)payload;``
-       call Leds.set(btrpkt->counter);``
-     }``
-     return msg;``
-   }``
+    event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len) {
+     if (len == sizeof(BlinkToRadioMsg)) {
+      BlinkToRadioMsg* btrpkt = (BlinkToRadioMsg*)payload;
+      call Leds.set(btrpkt->counter);
+     }
+     return msg;
+    }
 
 The ``receive`` event handler performs some simple operations. First, we
 need to ensure that the length of the message is what is expected. Then,
@@ -843,18 +814,18 @@ looks something like:
 
    $ make telosb install,1``
    mkdir -p build/telosb``
-       compiling BlinkToRadioAppC to a telosb binary``
+       compiling BlinkToRadioAppC to a telosb binary``
    ncc -o build/telosb/main.exe -Os -O -mdisable-hwmul -Wall -Wshadow -DDEF_TOS_AM_GROUP=0x7d ``
    -Wnesc-all -target=telosb -fnesc-cfile=build/telosb/app.c -board=   BlinkToRadioAppC.nc -lm``
-       compiled BlinkToRadioAppC to build/telosb/main.exe``
-               9040 bytes in ROM``
-                246 bytes in RAM``
+       compiled BlinkToRadioAppC to build/telosb/main.exe``
+               9040 bytes in ROM``
+                246 bytes in RAM``
    msp430-objcopy --output-target=ihex build/telosb/main.exe build/telosb/main.ihex``
-       writing TOS image``
+       writing TOS image``
    tos-set-symbols --objcopy msp430-objcopy --objdump msp430-objdump --target ihex build/telosb/main.ihex ``
    build/telosb/main.ihex.out-1 TOS_NODE_ID=1 ActiveMessageAddressC$addr=1``
-       found mote on COM17 (using bsl,auto)``
-       installing telosb binary using bsl``
+       found mote on COM17 (using bsl,auto)``
+       installing telosb binary using bsl``
    tos-bsl --telosb -c 16 -r -e -I -p build/telosb/main.ihex.out-1``
    MSP430 Bootstrap Loader Version: 1.39-telos-8``
    Mass Erase...``
@@ -883,8 +854,8 @@ something like the following scroll by:
    $ make telosb reinstall,2``
    tos-set-symbols --objcopy msp430-objcopy --objdump msp430-objdump --target ihex build/telosb/main.ihex ``
    build/telosb/main.ihex.out-2 TOS_NODE_ID=2 ActiveMessageAddressC$addr=2``
-       found mote on COM14 (using bsl,auto)``
-       installing telosb binary using bsl``
+       found mote on COM14 (using bsl,auto)``
+       installing telosb binary using bsl``
    tos-bsl --telosb -c 13 -r -e -I -p build/telosb/main.ihex.out-2``
    MSP430 Bootstrap Loader Version: 1.39-telos-8``
    Mass Erase...``
