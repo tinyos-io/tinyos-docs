@@ -98,7 +98,7 @@ the AM services:
    ``AMSend`` takes a destination AM address in its ``send`` command.
 
 The AM address of a node can be set at installation time, using the
-``make install.``\ *``n``* or ``make reinstall.``\ *``n``* commands. It
+``make install.n`` or ``make reinstall.n`` commands. It
 can be changed at runtime using the ``ActiveMessageAddressC`` component
 (see below).
 
@@ -186,7 +186,7 @@ fields only through ``Packet``, ``AMPacket``, and other such interfaces,
 as will be demonstrated in this tutorial.** The rationale for this
 approach is that it allows the data (payload) to be kept at a fixed
 offset, avoiding a copy when a message is passed between two link
-layers. See Section 3 in TEP 111 [2]_ for more details.
+layers. See Section 3 in :doc:`TEP 111: message_t <../../teps/txt/tep111>` for more details.
 
 .. _sending_a_message_over_the_radio:
 
@@ -368,7 +368,7 @@ minutes reading up on C structures. If you are familiar with C
 structures, this syntax should look familar but the ``nx_`` prefix on
 the keywords ``struct`` and ``uint16_t`` should stand out. The ``nx_``
 prefix is specific to the nesC language and signifies that the
-``struct`` and ``uint16_t`` are *external types*  [3]_ [4]_. External
+``struct`` and ``uint16_t`` are *external types*  [1]_ [2]_. External
 types have the same representation on all platforms. The nesC compiler
 generates code that transparently reorders access to ``nx_`` data types
 and eliminates the need to manually address endianness and alignment
@@ -688,6 +688,7 @@ reverse channel was no longer available.
 
 #. **Identify the interfaces (and components) that provide access to the
    radio and allow us to manipulate the ``message_t`` type.**
+
    We will use the ``Receive`` interface to receive packets.
 #. **Update the module block in the BlinkToRadioC.nc by adding uses
    statements for the interfaces we need:**
@@ -700,11 +701,13 @@ reverse channel was no longer available.
     }
 
 #. **Declare any new variables and add any needed initialization code.**
+   
    We will not require any new variables to receive and process messages
    from the radio.
 
 #. **Add any program logic and calls to the used interfaces we need for
    our application.**
+   
    Message reception is an event-driven process so we do not need to call
    any commands on the ``Receive``.
 
@@ -722,163 +725,152 @@ reverse channel was no longer available.
      return msg;
     }
 
-The ``receive`` event handler performs some simple operations. First, we
-need to ensure that the length of the message is what is expected. Then,
-the message payload is cast to a structure pointer of type
-``BlinkToRadioMsg*`` and assigned to a local variable. Then, the counter
-value in the message is used to set the states of the three LEDs.Note
-that we can safely manipulate the ``counter`` variable outside of an
-atomic section. The reason is that receive event executes in task
-context rather than interrupt context (events that have the ``async``
-keyword can execute in interrupt context). Since the TinyOS execution
-model allows only one task to execute at a time, if all accesses to a
-variable occur in task context, then no race conditions will occur for
-that variable. Since all accesses to ``counter`` occur in task context,
-no critical sections are needed when accessing it.
+   The ``receive`` event handler performs some simple operations. First, we
+   need to ensure that the length of the message is what is expected. Then,
+   the message payload is cast to a structure pointer of type
+   ``BlinkToRadioMsg*`` and assigned to a local variable. Then, the counter
+   value in the message is used to set the states of the three LEDs.Note
+   that we can safely manipulate the ``counter`` variable outside of an
+   atomic section. The reason is that receive event executes in task
+   context rather than interrupt context (events that have the ``async``
+   keyword can execute in interrupt context). Since the TinyOS execution
+   model allows only one task to execute at a time, if all accesses to a
+   variable occur in task context, then no race conditions will occur for
+   that variable. Since all accesses to ``counter`` occur in task context,
+   no critical sections are needed when accessing it.
 
-.. raw:: html
 
-   <li>
+#. **Update the implementation block of the application configuration
+   file by adding a components statement for each component used that
+   provides one of the interfaces chosen earlier.**
+   
+   The following lines can be added just below the existing
+   ``components`` declarations in the implementation block of
+   ``BlinkToRadioAppC.nc``:
 
-| **Update the implementation block of the application configuration
-  file by adding a components statement for each component used that
-  provides one of the interfaces chosen earlier.**
-| The following lines can be added just below the existing
-  ``components`` declarations in the implementation block of
-  ``BlinkToRadioAppC.nc``:
+   .. code-block:: nesc
 
-.. raw:: html
+    implementation {
+     ...
+     components new AMReceiverC(AM_BLINKTORADIO);
+     ...
+    }
 
-   </li>
+   This statement means that a new instance of ``AMReceiverC`` will be
+   created. ``AMReceiver`` is a generic, parameterized component. The
+   ``new`` keyword indicates that a new instance of ``AMReceiverC`` will be
+   created. The ``AM_BLINKTORADIO`` parameter indicates the AM type of the
+   ``AMReceiverC`` and is chosen to be the same as that used for the
+   ``AMSenderC`` used earlier, which ensures that the same AM type is being
+   used for both transmissions and receptions. ``AM_BLINKTORADIO`` is
+   defined in the ``BlinkToRadio.h`` header file.
 
-   implementation {``
-     ...``
-     components new AMReceiverC(AM_BLINKTORADIO);``
-     ...``
-   }``
+#. **Wire the the interfaces used by the application to the components
+   which provide those interfaces.**
+   
+   Update the wiring by insert the following line just before the closing
+   brace of the ``implementation`` block in BlinkToRadioAppC:
 
-This statement means that a new instance of ``AMReceiverC`` will be
-created. ``AMReceiver`` is a generic, parameterized component. The
-``new`` keyword indicates that a new instance of ``AMReceiverC`` will be
-created. The ``AM_BLINKTORADIO`` parameter indicates the AM type of the
-``AMReceiverC`` and is chosen to be the same as that used for the
-``AMSenderC`` used earlier, which ensures that the same AM type is being
-used for both transmissions and receptions. ``AM_BLINKTORADIO`` is
-defined in the ``BlinkToRadio.h`` header file.
+   .. code-block:: nesc
 
-.. raw:: html
+    implementation {
+     ...
+     App.Receive -> AMReceiverC;
+    }
 
-   <li>
+#. **Test your application!**
+   
+   Testing your application is easy. Get two motes. They can be mica2,
+   micaz, telosa, telosb, or tmote. For this exercise, let's assume that
+   the motes are telosb (if not, skip past the motelist part and program
+   the mote using whatever the appropriate programmer parameters are for
+   your hardware). Assuming you are using a telosb, first open a Cygwin
+   or Linux shell and cd to the ``apps/tutorials/BlinkToRadio``
+   directory. Then, insert the first telosb mote into an available USB
+   port on the PC and type ``motelist`` the at the Cygwin or Linux prompt
+   ($). You should see exactly one mote listed. For example:
 
-| **Wire the the interfaces used by the application to the components
-  which provide those interfaces.**
-| Update the wiring by insert the following line just before the closing
-  brace of the ``implementation`` block in BlinkToRadioAppC:
+   .. code-block:: bash
 
-.. raw:: html
+    $ motelist
+    Reference  CommPort   Description
+    ---------- ---------- ----------------------------------------
+    UCC89MXV   COM17      Telos (Rev B 2004-09-27)
 
-   </li>
+   Now, assuming you are in the ``apps/tutorials/BlinkToRadio`` directory,
+   type ``make telosb install,1``. You should see a lot text scroll by that
+   looks something like:
 
-   implementation {``
-     ...``
-     App.Receive -> AMReceiverC;``
-   }``
+   .. code-block:: bash
 
-.. raw:: html
+    $ make telosb install,1
+    mkdir -p build/telosb
+       compiling BlinkToRadioAppC to a telosb binary
+    ncc -o build/telosb/main.exe -Os -O -mdisable-hwmul -Wall -Wshadow -DDEF_TOS_AM_GROUP=0x7d
+    -Wnesc-all -target=telosb -fnesc-cfile=build/telosb/app.c -board=   BlinkToRadioAppC.nc -lm
+        compiled BlinkToRadioAppC to build/telosb/main.exe
+                9040 bytes in ROM
+                 246 bytes in RAM
+    msp430-objcopy --output-target=ihex build/telosb/main.exe build/telosb/main.ihex
+        writing TOS image
+    tos-set-symbols --objcopy msp430-objcopy --objdump msp430-objdump --target ihex build/telosb/main.ihex
+    build/telosb/main.ihex.out-1 TOS_NODE_ID=1 ActiveMessageAddressC$addr=1
+        found mote on COM17 (using bsl,auto)
+        installing telosb binary using bsl
+    tos-bsl --telosb -c 16 -r -e -I -p build/telosb/main.ihex.out-1
+    MSP430 Bootstrap Loader Version: 1.39-telos-8
+    Mass Erase...
+    Transmit default password ...
+    Invoking BSL...
+    Transmit default password ...
+    Current bootstrap loader version: 1.61 (Device ID: f16c)
+    Changing baudrate to 38400 ...
+    Program ...
+    9072 bytes programmed.
+    Reset device ...
+    rm -f build/telosb/main.exe.out-1 build/telosb/main.ihex.out-1
 
-   <li>
+   Now, remove the first telosb from the USB port, insert the batteries,
+   and set it aside. Insert the second telos into the USB port and once
+   again type ``motelist``. You should again see something like:
 
-| **Test your application!**
-| Testing your application is easy. Get two motes. They can be mica2,
-  micaz, telosa, telosb, or tmote. For this exercise, let's assume that
-  the motes are telosb (if not, skip past the motelist part and program
-  the mote using whatever the appropriate programmer parameters are for
-  your hardware). Assuming you are using a telosb, first open a Cygwin
-  or Linux shell and cd to the ``apps/tutorials/BlinkToRadio``
-  directory. Then, insert the first telosb mote into an available USB
-  port on the PC and type ``motelist`` the at the Cygwin or Linux prompt
-  ($). You should see exactly one mote listed. For example:
+   .. code-block:: bash
 
-.. raw:: html
+    $ motelist``
+    Reference  CommPort   Description``
+    ---------- ---------- ----------------------------------------``
+    UC9VN03I   COM14      Telos (Rev B 2004-09-27)``
 
-   </li>
 
-   $ motelist``
-   Reference  CommPort   Description``
-   ---------- ---------- ----------------------------------------``
-   UCC89MXV   COM17      Telos (Rev B 2004-09-27)``
+   Finally, type ``make telosb reinstall,2`` and you should once again see
+   something like the following scroll by:
 
-Now, assuming you are in the ``apps/tutorials/BlinkToRadio`` directory,
-type ``make telosb install,1``. You should see a lot text scroll by that
-looks something like:
+   .. code-block:: bash
 
-   $ make telosb install,1``
-   mkdir -p build/telosb``
-       compiling BlinkToRadioAppC to a telosb binary``
-   ncc -o build/telosb/main.exe -Os -O -mdisable-hwmul -Wall -Wshadow -DDEF_TOS_AM_GROUP=0x7d ``
-   -Wnesc-all -target=telosb -fnesc-cfile=build/telosb/app.c -board=   BlinkToRadioAppC.nc -lm``
-       compiled BlinkToRadioAppC to build/telosb/main.exe``
-               9040 bytes in ROM``
-                246 bytes in RAM``
-   msp430-objcopy --output-target=ihex build/telosb/main.exe build/telosb/main.ihex``
-       writing TOS image``
-   tos-set-symbols --objcopy msp430-objcopy --objdump msp430-objdump --target ihex build/telosb/main.ihex ``
-   build/telosb/main.ihex.out-1 TOS_NODE_ID=1 ActiveMessageAddressC$addr=1``
-       found mote on COM17 (using bsl,auto)``
-       installing telosb binary using bsl``
-   tos-bsl --telosb -c 16 -r -e -I -p build/telosb/main.ihex.out-1``
-   MSP430 Bootstrap Loader Version: 1.39-telos-8``
-   Mass Erase...``
-   Transmit default password ...``
-   Invoking BSL...``
-   Transmit default password ...``
-   Current bootstrap loader version: 1.61 (Device ID: f16c)``
-   Changing baudrate to 38400 ...``
-   Program ...``
-   9072 bytes programmed.``
-   Reset device ...``
-   rm -f build/telosb/main.exe.out-1 build/telosb/main.ihex.out-1``
+    $ make telosb reinstall,2
+    tos-set-symbols --objcopy msp430-objcopy --objdump msp430-objdump --target ihex build/telosb/main.ihex
+    build/telosb/main.ihex.out-2 TOS_NODE_ID=2 ActiveMessageAddressC$addr=2
+        found mote on COM14 (using bsl,auto)
+        installing telosb binary using bsl
+    tos-bsl --telosb -c 13 -r -e -I -p build/telosb/main.ihex.out-2
+    MSP430 Bootstrap Loader Version: 1.39-telos-8
+    Mass Erase...
+    Transmit default password ...
+    Invoking BSL...
+    Transmit default password ...
+    Current bootstrap loader version: 1.61 (Device ID: f16c)
+    Changing baudrate to 38400 ...
+    Program ...
+    9072 bytes programmed.
+    Reset device ...
+    rm -f build/telosb/main.exe.out-2 build/telosb/main.ihex.out-2
 
-Now, remove the first telosb from the USB port, insert the batteries,
-and set it aside. Insert the second telos into the USB port and once
-again type ``motelist``. You should again see something like:
-
-   $ motelist``
-   Reference  CommPort   Description``
-   ---------- ---------- ----------------------------------------``
-   UC9VN03I   COM14      Telos (Rev B 2004-09-27)``
-
-Finally, type ``make telosb reinstall,2`` and you should once again see
-something like the following scroll by:
-
-   $ make telosb reinstall,2``
-   tos-set-symbols --objcopy msp430-objcopy --objdump msp430-objdump --target ihex build/telosb/main.ihex ``
-   build/telosb/main.ihex.out-2 TOS_NODE_ID=2 ActiveMessageAddressC$addr=2``
-       found mote on COM14 (using bsl,auto)``
-       installing telosb binary using bsl``
-   tos-bsl --telosb -c 13 -r -e -I -p build/telosb/main.ihex.out-2``
-   MSP430 Bootstrap Loader Version: 1.39-telos-8``
-   Mass Erase...``
-   Transmit default password ...``
-   Invoking BSL...``
-   Transmit default password ...``
-   Current bootstrap loader version: 1.61 (Device ID: f16c)``
-   Changing baudrate to 38400 ...``
-   Program ...``
-   9072 bytes programmed.``
-   Reset device ...``
-   rm -f build/telosb/main.exe.out-2 build/telosb/main.ihex.out-2``
-
-**At this point, both motes should be blinking their LEDs.** If you
-press the RESET button on either telosb, then the LEDs on the *other*
-telosb will pause on whatever was being displayed at the moment you
-pressed RESET. When you release the RESET button, the paused mote will
-be reset and then resume counting from one.
-
-.. raw:: html
-
-   </ol>
-
+   **At this point, both motes should be blinking their LEDs.** If you
+   press the RESET button on either telosb, then the LEDs on the *other*
+   telosb will pause on whatever was being displayed at the moment you
+   pressed RESET. When you release the RESET button, the paused mote will
+   be reset and then resume counting from one.
+   
 Conclusions
 ===========
 
@@ -889,38 +881,12 @@ This lesson has introduced radio communications in TinyOS 2.x.
 Related Documentation
 =====================
 
-.. raw:: html
-
-   <references/>
-
---------------
-
-.. raw:: html
-
-   <center>
-
-< `Previous Lesson <Modules_and_the_TinyOS_Execution_Model>`__ \|
-`Top <Mote-mote_radio_communication#Introduction>`__ \| `Next
-Lesson <Mote-PC_serial_communication_and_SerialForwarder>`__\ **>**
-
-.. raw:: html
-
-   </center>
-
 .. [1]
-   `TEP 111:
-   message_t <https://github.com/tinyos-io/tinyos-main/blob/master/doc/html/tep111.html>`__
+   **Programming Hint 15:**\ \ Always use platform independent types
+   when defining message formats. From Phil Levis' `TinyOS Programming <http://csl.stanford.edu/~pal/pubs/tinyos-programming-1-0.pdf>`__
 
 .. [2]
-
-.. [3]
-   **Programming Hint 15:**\ \ Always use platform independent types
-   when defining message formats. From Phil Levis' `TinyOS
-   Programming <http://csl.stanford.edu/~pal/pubs/tinyos-programming-1-0.pdf>`__
-
-.. [4]
    **Programming Hint 16:**\ \ If you have to perform significant
    computation on a platform independent type or access it many
    (hundreds or more) times, then temporarily copying it to a native
-   type can be a good idea. From Phil Levis' `TinyOS
-   Programming <http://csl.stanford.edu/~pal/pubs/tinyos-programming-1-0.pdf>`__
+   type can be a good idea. From Phil Levis' `TinyOS Programming <http://csl.stanford.edu/~pal/pubs/tinyos-programming-1-0.pdf>`__
