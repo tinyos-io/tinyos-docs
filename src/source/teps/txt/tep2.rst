@@ -614,33 +614,27 @@ Citations
 .. [WindowsCE] "The WindowsCE operating system home page", *Online*,
    http://msdn.microsoft.com/embedded/windowsce
 
-.. [NetBSD] "The NetBSD project home page", *Online*, 
-   http://www.netbsd.org
+.. [NetBSD] "The NetBSD project home page", *Online*, http://www.netbsd.org
 
 .. [TEP1] :doc:`TEP 1: TEP structure and key words. <../../teps/txt/tep1>`
-   
+
 .. [TEP101] :doc:`TEP 101: Analog-to-Digital Converters (ADCs) <../../teps/txt/tep101>`
 
-.. [TEP102] Cory Sharp, Martin Turon, David Gay, "Timers"
+.. [TEP102] :doc:`TEP 102: Timers. <../../teps/txt/tep102>`
 
-.. [TEP103] David Gay, Jonathan Hui, "Permanent Data Storage (Flash)"
+.. [TEP103] :doc:`TEP 103: Permanent Data Storage (Flash). <../../teps/txt/tep103>`
 
-.. [TEP108] Kevin Klues, Philip Levis, David Gay, David Culler, Vlado
-            Handziski, "Resource Arbitration"
+.. [TEP108] :doc:`TEP 108: Resource Arbitration. <../../teps/txt/tep108>`
 
-.. [TEP109] David Gay, Philip Levis, Wei Hong, Joe Polastre, and Gilman
-            Tolle "Sensors and Sensor Boards"
+.. [TEP109] :doc:`TEP 109: Sensors and Sensor Boards. <../../teps/txt/tep109>`
 
-.. [TEP111] Philip Levis, "message_t"
+.. [TEP111] :doc:`TEP 111: message_t. <../../teps/txt/tep111>`
 
-.. [TEP112] Robert Szewczyk, Philip Levis, Martin Turon, Lama Nachman,
-            Philip Buonadonna, Vlado Handziski, "Microcontroller Power
-            Management"
+.. [TEP112] :doc:`TEP 112: Microcontroller Power Management. <../../teps/txt/tep112>`
 
-.. [TEP115] Kevin Klues, Vlado Handziski, Jan-Hinrich Hauer, Philip
-            Levis, "Power Management of Non-Virtualised Devices"
+.. [TEP115] :doc:`TEP 115: Power Management of Non-Virtualised Devices. <../../teps/txt/tep115>`
 
-.. [TEP116] Philip Levis, "Packet Protocols"
+.. [TEP116] :doc:`TEP 116: Packet Protocols. <../../teps/txt/tep116>`
 
-.. [TEP117] Phil Buonadonna, Jonathan Hui, "Low-Level I/O"
+.. [TEP117] :doc:`TEP 117: Low-Level I/O. <../../teps/txt/tep117>`
 

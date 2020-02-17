@@ -114,7 +114,7 @@ NOT cumulative and only one edge may be detected at a time. There may
 be other edge events supported by the platform which MAY be exported
 through a platform specific HAL interface. :
  
- .. code-block:: nesc
+.. code-block:: nesc
 
   interface GpioInterrupt {
 
@@ -181,7 +181,9 @@ interfaces and implementations.
 
 The interface is split into a synchronous byte level and an
 asynchronous packet level interface. The byte level interface is
-intended for short transactions (3-4 bytes) on the SPI bus. ::
+intended for short transactions (3-4 bytes) on the SPI bus. :
+
+.. code-block:: nesc
 
  interface SpiByte {
    async command uint8_t write( uint8_t tx );
@@ -280,7 +282,7 @@ units in byte-times, after which the command returns with an
 error. Note that use of this interface is discouraged if the UART baud
 rate is low. :
  
- .. code-block:: nesc
+.. code-block:: nesc
 
   interface UartByte {
    async command error_t send( uint8_t byte );
