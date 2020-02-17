@@ -617,10 +617,9 @@ Citations
 .. [NetBSD] "The NetBSD project home page", *Online*, 
    http://www.netbsd.org
 
-.. [TEP1] Philip Levis, "TEP structure and key words" 
+.. [TEP1] :doc:`TEP 1: TEP structure and key words. <../../teps/txt/tep1>`
    
-.. [TEP101] Jan-Hinrich Hauer, Philip Levis, Vlado Handziski, David Gay
-            "Analog-to-Digital Converters (ADCs)"
+.. [TEP101] :doc:`TEP 101: Analog-to-Digital Converters (ADCs) <../../teps/txt/tep101>`
 
 .. [TEP102] Cory Sharp, Martin Turon, David Gay, "Timers"
 
