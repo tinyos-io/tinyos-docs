@@ -107,8 +107,8 @@ protocol-level CRC.
 The Dispatcher component handles data packet bytes and delimiters. It
 is responsible for reading data bytes into a message_t and signaling
 packet reception to components above it. The dispatcher can support
-multiple packet formats. Based on how message_t works (see TEP
-111[tep111_]), this boils down to knowing where in a message_t a
+multiple packet formats. Based on how message_t works (see  :doc:`TEP
+111 message_t. <../../teps/txt/tep111>` ), this boils down to knowing where in a message_t a
 particular packet format begins (based on its header size). Section
 3.4 describes how the default TinyOS 2.x implementation,
 ``SerialDispatcherC`` does this.
@@ -126,11 +126,11 @@ library that lives in ``tos/lib/serial``.
 3.1 Raw UART: UartC
 --------------------------------------------------------------------
 
-The UART HIL[TEP2_] is ``UartC``, which provides a byte-level
+The UART HIL[:doc:`TEP 2 Hardware Abstraction Architecture. <../../teps/txt/tep2>`] is ``UartC``, which provides a byte-level
 interface to the underlying serial communication. It provides the
 ``SerialByteComm`` interface:
 
-::
+.. code-block:: nesc
 
   interface SerialByteComm {
     async command error_t put(uint8_t data);
@@ -139,7 +139,7 @@ interface to the underlying serial communication. It provides the
   }
 
 Alternatively, ``UartC`` may provide the UartStream multi-byte level
-interface. See the Low-Level I/O TEP [TEP117_] for details.
+interface. See the Low-Level I/O TEP [:doc:`TEP 117 Low-Level I/O.<../../teps/txt/tep117>`] for details.
 
 Additionally, UartC provides a split-phase interface to signal when
 the UART is idle. There are situations (such as when powering down the
@@ -150,7 +150,7 @@ MCUs that double-buffer UART communication (such as the msp430), a
 putDone event signifies that the UART is ready to accept another byte,
 but NOT that the UART is idle.
 
-::
+.. code-block:: nesc
 
   interface SerialFlush {
     command void flush();
@@ -168,7 +168,7 @@ HdlcTranslateC is the serial encoder/framer. It uses the
 ``SerialByteComm`` interface and provides the ``SerialFrameComm``
 interface:
 
-::
+.. code-block:: nesc
 
   interface SerialFrameComm {
     async command error_t putDelimiter();
@@ -180,7 +180,7 @@ interface:
     async event void putDone();
   }
 
-As its name suggests, it uses the same encoding as the HDLC[HDLC_]
+As its name suggests, it uses the same encoding as the HDLC [HDLC]_
 protocol. ``0x7e`` is reserved as a frame delimiter byte, and ``0x7d``
 is reserved as an escape byte. HdlcTranslateC maintains ten bits of
 state. The receive and send paths each have one bit to store whether
@@ -206,7 +206,7 @@ stored data byte.
 --------------------------------------------------------------------
 
 The SerialP component implements the serial protocol using PPP/HDLC-
-like framing (See RFC 1662[RFC1662_]). Type dispatch and buffer
+like framing (See RFC 1662 [RFC1662]_). Type dispatch and buffer
 management are left to higher layers in the serial stack. The protocol
 is currently stop-and-wait in the host-to-mote direction and best
 effort in the mote-to-host direction. 
@@ -224,7 +224,7 @@ the upper layer should indicate the end-of-packet by calling
 completeSend(). If completeSend is called from within a nextByte()
 handler, SerialP will ignore the return of the call to nextByte().
 
-::
+.. code-block:: nesc
 
   interface SendBytePacket {
     async command error_t startSend(uint8_t first_byte);
@@ -251,7 +251,7 @@ failure of a requested transmission.
 Packet reception is also managed by SerialP and the interface
 provided to the upper layer is ReceiveBytePacket:
 
-::
+.. code-block:: nesc
 
   interface ReceiveBytePacket {
     async event error_t startPacket();
@@ -307,7 +307,7 @@ identifier, on the packets sent and received through SerialP.
 SerialDispatcherC uses a parameterized SerialPacketInfo interface to
 be able to handle various packet formats:
 
-::
+.. code-block:: nesc
 
   interface SerialPacketInfo {
     async command uint8_t offset();
@@ -347,9 +347,9 @@ SerialActiveMessageP to SerialDispatcherC with uart_id_t
 TOS_SERIAL_ACTIVE_MESSAGE_ID and wires SerialPacketInfoActiveMessageP
 to SerialDispatcherC with uart_id_t TOS_SERIAL_ACTIVE_MESSAGE_ID:
 
-::
+.. code-block:: nesc
 
-  includes Serial;``
+  includes Serial;
   configuration SerialActiveMessageC {
     provides {
       interface Init;
@@ -389,7 +389,7 @@ ID and group of a mote.
 Platform-independent active messages do not have a CRC (they assumes
 the serial stack CRC is sufficient), and have the following header:
 
-::
+.. code-block:: nesc
 
   typedef nx_struct SerialAMHeader {
     nx_am_addr_t addr;
@@ -446,7 +446,7 @@ implementation schedulers the packets in these queues using some form
 of fair-share queueing. SerialAMReceiverC provides the virtualized
 abstraction for reception. These abstractions are very similar to
 TinyOS's radio abstractions, namely, AMSenderC and AMReceiverC. See
-Section 4 of TEP 116[TEP116_] for more information. Unlike the
+Section 4 of TEP 116 [:doc:`TEP 116: Packet Protocols. <../../teps/txt/tep116>`] for more information. Unlike the
 services in the TEP 116, the serial component virtualizations provide
 no snooping capabilities.
 
@@ -475,13 +475,13 @@ no snooping capabilities.
 6. Citations
 ====================================================================
 
-.. [TEP2] TEP 2: Hardware Abstraction Architecture. tinyos-2.x/doc/txt/tep2.txt
+-  :doc:`TEP 2: Hardware Abstraction Architecture. <../../teps/txt/tep2>`
 
-.. [TEP111] TEP 111: message_t. tinyos-2.x/doc/txt/tep111.txt
+-  :doc:`TEP 111: message_t. <../../teps/txt/tep111>`
 
-.. [TEP116] TEP 116: Packet Protocols. tinyos-2.x/doc/txt/tep116.txt
+-  :doc:`TEP 116: Packet Protocols. <../../teps/txt/tep116>`
  
-.. [TEP117] TEP 117: Low-Level I/O. tinyos-2.x/doc/txt/tep117.txt
+-  :doc:`TEP 117: Low-Level I/O. <../../teps/txt/tep117>`
 
 .. [HDLC] International Organization For Standardization, ISO Standard 3309-1979, "Data communication - High-level data link control procedures - Frame structure", 1979.
 

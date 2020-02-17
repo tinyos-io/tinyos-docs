@@ -49,7 +49,9 @@ different platforms.
 The solution to this problem in TinyOS 1.x is for there to be a standard
 definition of ``TOS_Msg``, which a platform (e.g., the micaZ) can
 redefine to match its radio. For example, a mica2 mote uses the standard 
-definition, which is::
+definition, which is:
+
+.. code-block:: nesc
 
   typedef struct TOS_Msg {
     // The following fields are transmitted/received on the radio.
@@ -72,7 +74,9 @@ definition, which is::
     uint8_t receiveSecurityMode;
   } TOS_Msg;
 
-while on a mote with a CC2420 radio (e.g., micaZ), ``TOS_Msg`` is defined as::
+while on a mote with a CC2420 radio (e.g., micaZ), ``TOS_Msg`` is defined as:
+
+.. code-block:: nesc
 
   typedef struct TOS_Msg {
     // The following fields are transmitted/received on the radio.
@@ -133,7 +137,9 @@ TinyOS 2.x continues this approach.
 ====================================================================
 
 In TinyOS 2.x, the standard message buffer is ``message_t``. The
-message_t structure is defined in ``tos/types/message.h``::
+message_t structure is defined in ``tos/types/message.h``:
+
+.. code-block:: nesc
 
   typedef nx_struct message_t {
     nx_uint8_t header[sizeof(message_header_t)];
@@ -168,7 +174,9 @@ alignment of packet buffers and field offsets within them. Metadata fields
 must be nx_structs for when complete packets are forwarded to the serial
 port in order to log traffic.
 For example, the CC1000 radio implementation defines
-its structures in ``CC1000Msg.h``::
+its structures in ``CC1000Msg.h``:
+
+.. code-block:: nesc
 
   typedef nx_struct cc1000_header {
     nx_am_addr_t addr;
@@ -198,7 +206,9 @@ named ``platform_message.h``. The mica2 platform, for example, has
 two data link layers: the CC1000 radio and the TinyOS serial
 stack [2]_. The serial packet format does not have a footer
 or metadata section. The ``platform_message.h`` of the mica2
-looks like this::
+looks like this:
+
+.. code-block:: nesc
 
   typedef union message_header {
     cc1000_header_t cc1k; 
@@ -215,7 +225,9 @@ looks like this::
 
 For a more complex example, consider a fictional platform named
 'megamica' that has both a CC1000 and a CC2420 radio. Its
-``platform_message.h`` would look like this::
+``platform_message.h`` would look like this:
+
+.. code-block:: nesc
 
   typedef union mega_mica_header {
     cc1000_header_t cc1k;
@@ -278,7 +290,9 @@ the layout of a packet in memory does not necessarily reflect the
 layout of its nesC structure.
 
 A packet header MAY start somewhere besides the beginning of
-the message_t. For example, consider the Telos platform::
+the message_t. For example, consider the Telos platform:
+
+.. code-block:: nesc
 
   typedef union message_header {
     cc2420_header_t cc2420;
@@ -314,7 +328,9 @@ data field.  When a link layer component needs to read or write protocol
 header fields, it MUST compute the location of the header as a negative 
 offset from the data field.  For example, the serial stack header has
 active message fields, such as the AM type. The command that returns
-the AM type, ``AMPacket.type()``, looks like this::
+the AM type, ``AMPacket.type()``, looks like this:
+
+.. code-block:: nesc
 
   serial_header_t* getHeader(message_t* msg) {
     return (serial_header_t*)(msg->data - sizeof(serial_header_t));
@@ -333,7 +349,9 @@ In most cases, the C compiler also compiles the call into a simple
 memory offset load.
 
 The following code is incorrect, as it directly casts the header field.
-It is an example of what components MUST NOT do::
+It is an example of what components MUST NOT do:
+
+.. code-block:: nesc
 
   serial_header_t* getHeader(message_t* msg) {
     return (serial_header_t*)(msg->header);
@@ -385,7 +403,9 @@ The metadata field of message_t stores data that
 a single-hop stack uses or collects does not transmit. 
 This mechanism allows packet layers to store per-packet 
 information such as RSSI or timestamps. For example, this is
-the CC2420 metadata structure::
+the CC2420 metadata structure:
+
+.. code-block:: nesc
 
   typedef nx_struct cc2420_metadata_t {
     nx_uint8_t tx_power;
@@ -432,22 +452,22 @@ copy at the botttom layer.
 ====================================================================
 
 The definition of message_t can be found in 
-``tinyos-2.x/tos/types/message.h``. 
+``tinyos-main/tos/types/message.h``. 
 
 The definition of the CC2420
-message format can be found in ``tinyos-2.x/tos/chips/cc2420/CC2420.h``.
+message format can be found in ``tinyos-main/tos/chips/cc2420/CC2420.h``.
 
 The defintion of the CC1000 message format can be found in 
-``tinyos-2.x/tos/chips/cc1000/CC1000Msg.h``. 
+``tinyos-main/tos/chips/cc1000/CC1000Msg.h``. 
 
 The definition
 of the standard serial stack packet format can be found in
-``tinyos-2.x/tos/lib/serial/Serial.h`` 
+``tinyos-main/tos/lib/serial/Serial.h`` 
 
 The definition of
 the telos family packet format can be found in 
-``tinyos-2.x/tos/platform/telosa/platform_message.h`` and the micaz format can be found in
-``tinyos-2.x/tos/platforms/micaz/platform_message.h``.
+``tinyos-main/tos/platform/telosa/platform_message.h`` and the micaz format can be found in
+``tinyos-main/tos/platforms/micaz/platform_message.h``.
 
 5. Author's Address
 ====================================================================
@@ -464,10 +484,10 @@ the telos family packet format can be found in
 6. Citations
 ====================================================================
 
-.. [1] `nesC: A Programming Language for Deeply Embedded Networks. <http://nescc.sourceforge.net>`_
+.. [1] `nesC: A Programming Language for Deeply Embedded Networks. <https://github.com/tinyos/nesc>`_
 
-.. [2] TEP 113: Serial Communication.
+.. [2] :doc:`TEP 113: Serial Communication. <../../teps/txt/tep113>`
 
-.. [3] TEP 116: Packet Protocols.
+.. [3] :doc:`TEP 116: Packet Protocols. <../../teps/txt/tep116>`
 
 
