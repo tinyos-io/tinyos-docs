@@ -182,12 +182,16 @@ required to provide millisecond granularity timers, and can provide
 finer granularity timers (e.g., 32kHz) if needed.
 
 Timers present a good example of virtualization in 2.0. In 1.x,
-a program instantiates a timer by wiring to TimerC::
+a program instantiates a timer by wiring to TimerC:
+
+.. code-block:: nesc
 
   components App, TimerC;
   App.Timer -> TimerC.Timer[unique("Timer")];
 
-In 2.0, a program instantiates a timer::
+In 2.0, a program instantiates a timer:
+
+.. code-block:: nesc
 
   components App, new TimerMilliC();
   App.Timer -> TimerMilliC;
@@ -283,7 +287,9 @@ whose values include SUCCESS, FAIL, EBUSY, and ECANCEL. Interface
 commands and events define which error codes they may return and why.
 
 From the perspective of porting code, this is the most significant
-different in 2.0. Calls that were once::
+different in 2.0. Calls that were once:
+
+.. code-block:: nesc
 
   if (call X.y()) {
     busy = TRUE;  
@@ -292,7 +298,9 @@ different in 2.0. Calls that were once::
 
 now have their meanings reversed. In 1.x, the busy statement will execute
 if the call succeeds, while in 2.0 it will execute if the call fails.
-This encourages a more portable, upgradable, and readable approach::
+This encourages a more portable, upgradable, and readable approach:
+
+.. code-block:: nesc
 
   if (call X.y() == SUCCESS) {
     busy = TRUE;
@@ -396,34 +404,34 @@ David Moss, and Kristin Wright.
 16. Citations
 ====================================================================
 
-.. [TEP1] TEP 1: TEP Structure and Keywords. http://tinyos.cvs.sourceforge.net/*checkout*/tinyos/tinyos-2.x/doc/html/tep1.html?pathrev=tinyos-2_0_devel-BRANCH
+.. [TEP1] :doc:`TEP 1: TEP Structure and Keywords. <../../teps/txt/tep1>`
 
-.. [TEP2] TEP 2: Hardware Abstraction Architecture. http://tinyos.cvs.sourceforge.net/*checkout*/tinyos/tinyos-2.x/doc/html/tep2.html?pathrev=tinyos-2_0_devel-BRANCH
+.. [TEP2] :doc:`TEP 2: Hardware Abstraction Architecture. <../../teps/txt/tep2>`
 
-.. [TEP3] TEP 3: Coding Standard. http://tinyos.cvs.sourceforge.net/*checkout*/tinyos/tinyos-2.x/doc/html/tep3.html?pathrev=tinyos-2_0_devel-BRANCH
+.. [TEP3] :doc:`TEP 3: Coding Standard. <../../teps/txt/tep3>`
 
-.. [TEP101] TEP 101: Analog-to-Digital Converters. http://tinyos.cvs.sourceforge.net/*checkout*/tinyos/tinyos-2.x/doc/html/tep101.html?pathrev=tinyos-2_0_devel-BRANCH
+.. [TEP101] :doc:`TEP 101: Analog-to-Digital Converters. <../../teps/txt/tep101>`
 
-.. [TEP102] TEP 102: Timers. http://tinyos.cvs.sourceforge.net/*checkout*/tinyos/tinyos-2.x/doc/html/tep102.html?pathrev=tinyos-2_0_devel-BRANCH
+.. [TEP102] :doc:`TEP 102: Timers. <../../teps/txt/tep102>` TEP 102: Timers.
 
-.. [TEP106] TEP 106: Schedulers and Tasks. http://tinyos.cvs.sourceforge.net/*checkout*/tinyos/tinyos-2.x/doc/html/tep106.html?pathrev=tinyos-2_0_devel-BRANCH
+.. [TEP106] :doc:`TEP 106: Schedulers and Tasks. <../../teps/txt/tep106>`
 
-.. [TEP107] TEP 107: Boot Sequence. http://tinyos.cvs.sourceforge.net/*checkout*/tinyos/tinyos-2.x/doc/html/tep107.html?pathrev=tinyos-2_0_devel-BRANCH
+.. [TEP107] :doc:`TEP 107: Boot Sequence. <../../teps/txt/tep107>`
 
-.. [TEP108] TEP 108: message_t. http://tinyos.cvs.sourceforge.net/*checkout*/tinyos/tinyos-2.x/doc/html/tep108.html?pathrev=tinyos-2_0_devel-BRANCH
+.. [TEP108] :doc:`TEP 108: message_t. <../../teps/txt/tep108>`
 
-.. [TEP109] TEP 109: Sensorboards. http://tinyos.cvs.sourceforge.net/*checkout*/tinyos/tinyos-2.x/doc/html/tep109.html?pathrev=tinyos-2_0_devel-BRANCH
+.. [TEP109] :doc:`TEP 109: Sensorboards. <../../teps/txt/tep109>`
 
-.. [TEP110] TEP 110: Service Distributions. http://tinyos.cvs.sourceforge.net/*checkout*/tinyos/tinyos-2.x/doc/html/tep110.html?pathrev=tinyos-2_0_devel-BRANCH
+.. [TEP110] :doc:`TEP 110: Service Distributions. <../../teps/txt/tep110>`
 
-.. [TEP111] TEP 111: message_t. http://tinyos.cvs.sourceforge.net/*checkout*/tinyos/tinyos-2.x/doc/html/tep111.html?pathrev=tinyos-2_0_devel-BRANCH
+.. [TEP111] :doc:`TEP 111: message_t. <../../teps/txt/tep111>`
 
-.. [TEP112] TEP 112: Microcontroller Power Management. http://tinyos.cvs.sourceforge.net/*checkout*/tinyos/tinyos-2.x/doc/html/tep112.html?pathrev=tinyos-2_0_devel-BRANCH
+.. [TEP112] :doc:`TEP 112: Microcontroller Power Management. <../../teps/txt/tep112>`
 
-.. [TEP113] TEP 113: Serial Communication. http://tinyos.cvs.sourceforge.net/*checkout*/tinyos/tinyos-2.x/doc/html/tep113.html?pathrev=tinyos-2_0_devel-BRANCH
+.. [TEP113] :doc:`TEP 113: Serial Communication. <../../teps/txt/tep113>`
  
-.. [TEP114] TEP 114: SIDs: Source and Sink Independent Drivers. http://tinyos.cvs.sourceforge.net/*checkout*/tinyos/tinyos-2.x/doc/html/tep114.html?pathrev=tinyos-2_0_devel-BRANCH
+.. [TEP114] :doc:`TEP 114: SIDs: Source and Sink Independent Drivers. <../../teps/txt/tep114>`
  
-.. [TEP115] TEP 115: Power Management of Non-Virtualised Devices. http://tinyos.cvs.sourceforge.net/*checkout*/tinyos/tinyos-2.x/doc/html/tep115.html?pathrev=tinyos-2_0_devel-BRANCH
+.. [TEP115] :doc:`TEP 115: Power Management of Non-Virtualised Devices. <../../teps/txt/tep115>`
  
-.. [TEP116] TEP 116: Packet Protocols. http://tinyos.cvs.sourceforge.net/*checkout*/tinyos/tinyos-2.x/doc/html/tep116.html?pathrev=tinyos-2_0_devel-BRANCH
+.. [TEP116] :doc:`TEP 116: Packet Protocols. <../../teps/txt/tep116>`
