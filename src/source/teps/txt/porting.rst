@@ -21,13 +21,17 @@ As these observations come from porting a network protocol, they are
 rather protocol-centric and do not consider other abstractions such
 as storage. We hope to add such points in the future.
 
-  1.    SUCCESS was a non-zero error code in TinyOS 1.x, while FAIL was non-zero. So any "if blocks" of the following form need to be changed::
+  1.    SUCCESS was a non-zero error code in TinyOS 1.x, while FAIL was non-zero. So any "if blocks" of the following form need to be changed:
+
+  .. code-block:: nesc
 
            if (call Packet...) {
                //SUCCESS!: do this...
            }
 
-  In TinyOS 2.x, SUCCESS is equal to a zero error code, while other error codes are non-zero. So calls like this should be changed to make sure they test the result for equality with SUCCESS::
+  In TinyOS 2.x, SUCCESS is equal to a zero error code, while other error codes are non-zero. So calls like this should be changed to make sure they test the result for equality with SUCCESS:
+
+  .. code-block:: nesc
 
          if (call Packet... () == SUCCESS ) { 
                //SUCCESS!: do this...
