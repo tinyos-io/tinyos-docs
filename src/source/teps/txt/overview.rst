@@ -418,7 +418,7 @@ David Moss, and Kristin Wright.
 
 .. [TEP107] :doc:`TEP 107: Boot Sequence. <../../teps/txt/tep107>`
 
-.. [TEP108] :doc:`TEP 108: message_t. <../../teps/txt/tep108>`
+.. [TEP108] :doc:`TEP 108: Resource Arbitration. <../../teps/txt/tep108>`
 
 .. [TEP109] :doc:`TEP 109: Sensorboards. <../../teps/txt/tep109>`
 
